@@ -1,0 +1,13 @@
+# 依赖与构建产物
+node_modules/
+*.log
+
+# 打包产物（本包按需生成，不随仓库分发）
+*.tgz
+*.pack.json
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

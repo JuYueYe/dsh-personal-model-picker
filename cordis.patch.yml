@@ -1,0 +1,5 @@
+- id: ui-model-selection
+  disabled: true
+- insert:
+    - id: dsh-personal-model-picker
+      name: dsh-personal-model-picker
