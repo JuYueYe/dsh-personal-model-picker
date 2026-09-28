@@ -401,6 +401,17 @@ const MEASURE_STYLE = {
 	left: 0,
 	top: 0
 };
+
+/**
+* Fixed card height for the provider/model pane. place() anchors the card by its
+* BOTTOM edge (top = trigger.top - 8 - measured height), so any height change
+* while hovering also moves the card's top edge - and with it the provider rows
+* under a stationary pointer, which flips the hover to another provider and
+* starts a resize loop. A constant height (28px column header + 320px model
+* column + the card's own padding) removes the loop: hovering a provider only
+* swaps the right column's contents, which scroll.
+*/
+const MODEL_PANE_HEIGHT = 348;
 /**
 * Render the composer model seat.
 * @param props - owner share (locked) + injected face (shared directory
@@ -478,6 +489,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			if (menuRef.current && modelPane) {
 				menuRef.current.style.width = `${width}px`;
 				menuRef.current.style.minWidth = "0";
+				menuRef.current.style.height = `${MODEL_PANE_HEIGHT}px`;
 				menuRef.current.style.maxHeight = `${Math.max(80, rect.top - MARGIN - 8)}px`;
 			}
 			const lw = menuRef.current?.offsetWidth ?? width;
@@ -487,6 +499,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			setMenuPos({
 				left: x, top: y, boxSizing: "border-box", overflow: "hidden",
 				width: modelPane ? width : undefined, minWidth: modelPane ? 0 : undefined,
+				height: modelPane ? MODEL_PANE_HEIGHT : undefined,
 				maxHeight: Math.max(80, rect.top - MARGIN - 8), borderRadius: 12
 			});
 		};
@@ -689,7 +702,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 					})] }),
 					pane.startsWith("model") && (0, react_jsx_runtime.jsxs)("div", {
 						className: "personal-model-columns",
-						style: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 3fr)", gridTemplateRows: "28px minmax(0, 1fr)", width: "100%", minHeight: 0, overflow: "hidden" },
+						style: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 3fr)", gridTemplateRows: "28px minmax(0, 1fr)", width: "100%", height: "100%", minHeight: 0, overflow: "hidden" },
 						children: [
 							(0, react_jsx_runtime.jsx)("div", { style: { gridColumn: 1, gridRow: 1, padding: "4px 6px", fontSize: 12 }, children: t("menu.provider") }),
 							(0, react_jsx_runtime.jsxs)("div", {
@@ -710,7 +723,8 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								]
 							}),
 							activeGroup !== void 0 && (0, react_jsx_runtime.jsxs)("div", {
-								style: { gridColumn: 2, gridRow: "1 / 3", minWidth: 0, minHeight: 0, maxHeight: 320, overflowY: "auto", overflowX: "hidden", padding: "0 0 2px 4px", borderLeft: "1px solid var(--dsw-alias-border-l1)" },
+								key: activeGroup.id,
+								style: { gridColumn: 2, gridRow: "1 / 3", minWidth: 0, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 0 2px 4px", borderLeft: "1px solid var(--dsw-alias-border-l1)" },
 								children: [(0, react_jsx_runtime.jsx)("div", { style: { position: "sticky", top: 0, background: "var(--dsw-specific-menu)", padding: "4px 6px", height: 28, boxSizing: "border-box", color: "var(--dsw-alias-label-secondary)", fontSize: 12, fontWeight: 600 }, children: t("menu.model") }), activeGroup.models.map((model) => {
 									const selected = state.current?.provider === activeGroup.id && state.current.model === model.id;
 									return (0, react_jsx_runtime.jsxs)("button", {
