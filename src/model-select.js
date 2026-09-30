@@ -250,7 +250,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 					else show();
 				},
 				children: [
-					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDataOutline16, {
+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDataOutlineRegular, {
 						className: ModelSelect_module_css_default.triggerIcon,
 						size: 16
 					}),
@@ -258,7 +258,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 						className: ModelSelect_module_css_default.triggerLabel,
 						children: modelLabel
 					}),
-					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: clsx(ModelSelect_module_css_default.chevron, open && ModelSelect_module_css_default.chevronOpen) })
+					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: clsx(ModelSelect_module_css_default.chevron, open && ModelSelect_module_css_default.chevronOpen) })
 				]
 			}),
 			(0, react_jsx_runtime.jsxs)("button", {
@@ -267,7 +267,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 				disabled: locked || busy,
 				title: effortChoices.length === 0 ? t("empty.efforts") : t("menu.effort"),
 				onClick: () => { if (open && pane === "effort") close(); else { setPane("effort"); setOpen(true); reload(); } },
-				children: ["思考等级：", effortLabel ?? t("effort.providerDefault"), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})]
+				children: ["思考等级：", effortLabel ?? t("effort.providerDefault"), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})]
 			}),
 			open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
 				ref: menuRef,
@@ -295,7 +295,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								className: ModelSelect_module_css_default.cellValue,
 								children: modelLabel
 							}),
-							(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutline14, { className: ModelSelect_module_css_default.cellChevron })
+							(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { className: ModelSelect_module_css_default.cellChevron })
 						]
 					}), (0, react_jsx_runtime.jsxs)("button", {
 						ref: itemRef(),
@@ -314,7 +314,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								className: ModelSelect_module_css_default.cellValue,
 								children: effortLabel
 							}),
-							(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutline14, { className: ModelSelect_module_css_default.cellChevron })
+							(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { className: ModelSelect_module_css_default.cellChevron })
 						]
 					})] }),
 					pane.startsWith("model") && (0, react_jsx_runtime.jsxs)("div", {
@@ -333,7 +333,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 											className: clsx(ModelSelect_module_css_default.option, providerActive && ModelSelect_module_css_default.selected),
 											style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8 },
 											onMouseEnter: () => { setPane(`model:${group.id}`); }, onFocus: () => { setPane(`model:${group.id}`); }, onClick: () => { setPane(`model:${group.id}`); },
-											children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, children: (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.modelName, children: group.name }) }), providerSelected && (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {}) })]
+											children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, children: (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.modelName, children: group.name }) }), providerSelected && (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) })]
 										}, group.id);
 									}),
 									state.failures.map((failure) => (0, react_jsx_runtime.jsx)("div", { className: ModelSelect_module_css_default.warning, children: t("warning.groupLoad", { name: failure.name, message: failure.message }) }, failure.id))
@@ -347,7 +347,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 									return (0, react_jsx_runtime.jsxs)("button", {
 										ref: itemRef(), type: "button", role: "menuitemradio", "aria-checked": selected, className: clsx(ModelSelect_module_css_default.option, selected && ModelSelect_module_css_default.selected), title: model.name ?? model.id, disabled: busy,
 										onClick: () => { choose({ provider: activeGroup.id, model: model.id }); },
-										children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, style: { display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: model.name ?? model.id }), (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: selected ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {}) : null })]
+										children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, style: { display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: model.name ?? model.id }), (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: selected ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : null })]
 									}, model.id);
 								})]
 							})
@@ -382,14 +382,14 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 							})
 						}), (0, react_jsx_runtime.jsx)("span", {
 							className: ModelSelect_module_css_default.check,
-							children: effectiveEffort === level.effort ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {}) : null
+							children: effectiveEffort === level.effort ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : null
 						})]
 					}, level.key))] })
 				]
 			}), document.body),
 			toast !== null && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
 				text: toast.text,
-				icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutline16, {}),
+				icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, {}),
 				anchor: rootRef.current?.closest("[data-composer-card]") ?? null,
 				onDone: () => {
 					setToast(null);
