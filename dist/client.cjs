@@ -646,11 +646,11 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			}),
 			(0, react_jsx_runtime.jsxs)("button", {
 				ref: effortTriggerRef, type: "button", className: ModelSelect_module_css_default.trigger,
-				"aria-label": "思考等级", "aria-haspopup": "menu", "aria-expanded": open && pane === "effort",
+				"aria-label": t("menu.thinking"), "aria-haspopup": "menu", "aria-expanded": open && pane === "effort",
 				disabled: locked || busy,
 				title: effortChoices.length === 0 ? t("empty.efforts") : t("menu.effort"),
 				onClick: () => { if (open && pane === "effort") close(); else { setPane("effort"); setOpen(true); reload(); } },
-				children: ["思考等级：", effortLabel ?? t("effort.providerDefault"), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})]
+				children: [t("effort.prefix"), effortLabel ?? t("effort.providerDefault"), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})]
 			}),
 			open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
 				ref: menuRef,
@@ -808,6 +808,7 @@ const zh = {
 	"menu.provider": "供应商",
 	"menu.model": "模型",
 	"effort.placeholder": "标准",
+	"effort.prefix": "思考等级：",
 	"menu.thinking": "思考等级",
 	"menu.effort": "推理等级",
 	"effort.providerDefault": "供应商默认",
@@ -834,6 +835,7 @@ const en = {
 	"menu.provider": "Provider",
 	"menu.model": "Model",
 	"effort.placeholder": "Standard",
+	"effort.prefix": "Effort: ",
 	"menu.thinking": "Effort",
 	"menu.effort": "Effort",
 	"effort.providerDefault": "Default",

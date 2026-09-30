@@ -109,7 +109,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 内置的 `deepseek-official/deepseek-v4-flash` 与 `deepseek-v4-pro` 两款模型的描述文案也做了本地化。
 
-**已知限制**：思考等级展开行里的 `思考等级：` 前缀目前是硬编码中文，英文界面下不会被翻译。
+思考等级展开行的前缀与无障碍标签均已本地化：前缀用 `effort.prefix`（`思考等级：` / `Effort: `），无障碍标签复用已有的 `menu.thinking`。
 
 ## 安装
 
@@ -129,6 +129,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 - 验证基线：DSH 核心 `0.1.5-rc.2`、旧桌面端 0.15.4；官方桌面版 44.0.0 尚待验证
 - 依赖 DSH 的 slots、modelDirectories、sessions、`remote.session` 以及客户端模块加载机制
+- **图标导出改过名**：0.1.5 时代是 `IconXxx14` / `IconXxx16`，0.2.0-rc.2 起统一为 `IconXxxRegular`。本插件按 `...Regular` 取名；名字对不上时图标取到 `undefined`，React 渲染 `<undefined />` 会抛错，座位项随即被槽机制除名（`abdicate`）——表现为输入框旁的模型入口**整个消失**，而不是样式错乱。对照 `@deepseek-ai/dsh-client-ui-primitives` 的实际导出即可定位
 - **不保证任意核心/桌面版本兼容**；升级前请重新验证，未验证的版本不要继续用它替换官方入口
 - 不是可以脱离 DSH 单独使用的通用网页组件
 
