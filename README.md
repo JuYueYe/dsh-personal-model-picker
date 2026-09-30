@@ -113,18 +113,8 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 ## 安装
 
-1. 装到**宿主实际使用的那个 profile**。官方桌面版使用 `%USERPROFILE%\.dsh\profiles\desktop`；旧版 Tauri 宿主可能使用 `tauri` profile。DSH 安装目录（例如 `G:\aisp\deepseek`）不等于 profile 目录。
-2. 把本包加入该 profile 的 `dsh.profile.bundles` 数组 —— **只装依赖不生效**，必须进 bundles，patch 才会参与启动组合。例如官方桌面版的 `package.json` 应包含：
-
-   ```json
-   "bundles": [
-     "@deepseek-ai/dsh-base",
-     "@deepseek-ai/dsh-web-app",
-     "dsh-personal-model-picker"
-   ]
-   ```
-
-3. 确认插件包在同一 profile 的 `dependencies` 中，并重启宿主。
+1. 在 DSH 当前使用的 profile 中，通过插件管理器安装并启用本插件；仅下载或安装依赖不会自动启用 bundle patch。
+2. 重启 DSH 使插件生效。若管理器显示已安装但插件未出现，请确认该插件已加入当前 profile 的 bundles。
 
 > **Desktop 0.15.4 的坑**：它会把 `file:` 指向的 **tarball（.tgz）**依赖误判成悬空链接，并在重启时删掉。
 > 这个版本的桌面端请**解压 tgz，用目录形式的 `file:` 指定**，不要直接把依赖指向 `.tgz`。
