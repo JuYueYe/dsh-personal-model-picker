@@ -7,7 +7,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 | 版本 | 1.1.0 |
 | 类型 | DSH 客户端插件（`platform: web`，需要桌面宿主 WebView） |
 | 许可证 | MIT（版权归上游，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)） |
-| 验证基线 | DSH 核心 `0.1.5-rc.2` |
+| 验证基线 | DSH 核心 `0.1.5-rc.2`；官方桌面版 44.0.0 尚待验证 |
 | 官方性 | **非官方插件** —— 改编自官方包 `@deepseek-ai/dsh-client-ui-model-selection@0.1.5-rc.2`，不是 DeepSeek 发布或背书的作品 |
 
 ## 它是「替换」，不是「叠加」
@@ -113,9 +113,18 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 ## 安装
 
-1. 装到**宿主实际使用的那个 profile**。桌面版用的是 `%USERPROFILE%\.dsh\profiles\tauri`。
-2. 把本包加入该 profile 的 `dsh.profile.bundles` 数组 —— **只装依赖不生效**，必须进 bundles，patch 才会参与启动组合。
-3. 改完重启宿主。
+1. 装到**宿主实际使用的那个 profile**。官方桌面版使用 `%USERPROFILE%\.dsh\profiles\desktop`；旧版 Tauri 宿主可能使用 `tauri` profile。DSH 安装目录（例如 `G:\aisp\deepseek`）不等于 profile 目录。
+2. 把本包加入该 profile 的 `dsh.profile.bundles` 数组 —— **只装依赖不生效**，必须进 bundles，patch 才会参与启动组合。例如官方桌面版的 `package.json` 应包含：
+
+   ```json
+   "bundles": [
+     "@deepseek-ai/dsh-base",
+     "@deepseek-ai/dsh-web-app",
+     "dsh-personal-model-picker"
+   ]
+   ```
+
+3. 确认插件包在同一 profile 的 `dependencies` 中，并重启宿主。
 
 > **Desktop 0.15.4 的坑**：它会把 `file:` 指向的 **tarball（.tgz）**依赖误判成悬空链接，并在重启时删掉。
 > 这个版本的桌面端请**解压 tgz，用目录形式的 `file:` 指定**，不要直接把依赖指向 `.tgz`。
@@ -128,7 +137,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 ## 兼容性
 
-- 验证基线：DSH 核心 `0.1.5-rc.2`、桌面端 0.15.4
+- 验证基线：DSH 核心 `0.1.5-rc.2`、旧桌面端 0.15.4；官方桌面版 44.0.0 尚待验证
 - 依赖 DSH 的 slots、modelDirectories、sessions、`remote.session` 以及客户端模块加载机制
 - **不保证任意核心/桌面版本兼容**；升级前请重新验证，未验证的版本不要继续用它替换官方入口
 - 不是可以脱离 DSH 单独使用的通用网页组件
