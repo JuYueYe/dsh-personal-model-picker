@@ -1,13 +1,13 @@
 # dsh-personal-model-picker
 
-DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自带的模型入口，把「供应商 / 模型」选择和独立的「思考等级」菜单合并到一个紧凑面板里。
+DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自带的模型入口，把「供应商 / 模型」选择和独立的「推理等级」菜单合并到一个紧凑面板里。
 
 | | |
 |---|---|
-| 版本 | 1.1.0 |
+| 版本 | 1.1.1 |
 | 类型 | DSH 客户端插件（`platform: web`，需要桌面宿主 WebView） |
 | 许可证 | MIT（版权归上游，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)） |
-| 验证基线 | DSH 核心 `0.1.5-rc.2`；官方桌面版 44.0.0 尚待验证 |
+| 验证基线 | DSH 核心 `0.2.0-rc.2`（官方桌面端 nightly）**已实测通过**；改编基线为 `0.1.5-rc.2` |
 | 官方性 | **非官方插件** —— 改编自官方包 `@deepseek-ai/dsh-client-ui-model-selection@0.1.5-rc.2`，不是 DeepSeek 发布或背书的作品 |
 
 ## 它是「替换」，不是「叠加」
@@ -28,7 +28,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 ### 触发按钮（输入框旁）
 
-同时显示当前模型名与思考等级，宽度自适应输入框容器：
+同时显示当前模型名与推理等级，宽度自适应输入框容器：
 
 ```
 [ deepseek-v4-pro   标准  ▾ ]
@@ -39,7 +39,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 ```
 ┌────────────────────────────────┐
 │ 模型         deepseek-v4-pro  › │
-│ 思考等级      标准             › │
+│ 推理等级      标准             › │
 └────────────────────────────────┘
 ```
 
@@ -67,7 +67,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 > **高度为什么必须是常量**：`place()` 按**下边缘**定位卡片（`top = 触发按钮上沿 − 8 − 实测高度`）。一旦高度跟随悬停供应商的模型数量变化，卡片顶边就会上下移动，静止的鼠标指针下方随之换成另一个供应商，于是触发换栏、再次改变高度——形成「界面上下乱飞」的反馈环。固定高度后，悬停只切换右栏内容，两栏各自滚动。
 
-### 「思考等级」展开后
+### 「推理等级」展开后
 
 独立一栏，不与模型列表混排。模型未声明可调等级时，提示「当前使用供应商默认设置。此模型未声明可调推理等级，不会额外发送等级参数。」
 
@@ -104,12 +104,13 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 | `menu.provider` | 供应商 | Provider |
 | `menu.model` | 模型 | Model |
 | `menu.effort` | 推理等级 | Effort |
+| `effort.prefix` | 推理等级： | Effort:  |
 | `trigger.fallback` | 选择模型 | Select model |
 | `effort.providerDefault` | 供应商默认 | Default |
 
 内置的 `deepseek-official/deepseek-v4-flash` 与 `deepseek-v4-pro` 两款模型的描述文案也做了本地化。
 
-思考等级展开行的前缀与无障碍标签均已本地化：前缀用 `effort.prefix`（`思考等级：` / `Effort: `），无障碍标签复用已有的 `menu.thinking`。
+推理等级展开行的前缀与无障碍标签均已本地化：前缀用 `effort.prefix`（`推理等级：` / `Effort: `），无障碍标签复用 `menu.effort`；原先重复的 `menu.thinking` 键已删除。用词与官方 0.2.0 的 `menu.effort` / `menu.aria` / `empty.efforts` 保持一致。
 
 ## 安装
 
@@ -127,7 +128,7 @@ DeepSeek Harness（DSH）的**紧凑双栏模型选择器**。它替换 DSH 自�
 
 ## 兼容性
 
-- 验证基线：DSH 核心 `0.1.5-rc.2`、旧桌面端 0.15.4；官方桌面版 44.0.0 尚待验证
+- 验证基线：DSH 核心 `0.2.0-rc.2`（官方桌面端 nightly，2026-09-30 实测通过，含图标改名修复）；改编来源为 `0.1.5-rc.2`
 - 依赖 DSH 的 slots、modelDirectories、sessions、`remote.session` 以及客户端模块加载机制
 - **图标导出改过名**：0.1.5 时代是 `IconXxx14` / `IconXxx16`，0.2.0-rc.2 起统一为 `IconXxxRegular`。本插件按 `...Regular` 取名；名字对不上时图标取到 `undefined`，React 渲染 `<undefined />` 会抛错，座位项随即被槽机制除名（`abdicate`）——表现为输入框旁的模型入口**整个消失**，而不是样式错乱。对照 `@deepseek-ai/dsh-client-ui-primitives` 的实际导出即可定位
 - **不保证任意核心/桌面版本兼容**；升级前请重新验证，未验证的版本不要继续用它替换官方入口

@@ -263,7 +263,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			}),
 			(0, react_jsx_runtime.jsxs)("button", {
 				ref: effortTriggerRef, type: "button", className: ModelSelect_module_css_default.trigger,
-				"aria-label": t("menu.thinking"), "aria-haspopup": "menu", "aria-expanded": open && pane === "effort",
+				"aria-label": t("menu.effort"), "aria-haspopup": "menu", "aria-expanded": open && pane === "effort",
 				disabled: locked || busy,
 				title: effortChoices.length === 0 ? t("empty.efforts") : t("menu.effort"),
 				onClick: () => { if (open && pane === "effort") close(); else { setPane("effort"); setOpen(true); reload(); } },
