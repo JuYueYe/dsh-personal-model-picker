@@ -342,7 +342,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 							activeGroup !== void 0 && (0, react_jsx_runtime.jsxs)("div", {
 								key: activeGroup.id,
 								style: { gridColumn: 2, gridRow: "1 / 3", minWidth: 0, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 0 2px 4px", borderLeft: "1px solid var(--dsw-alias-border-l1)" },
-								children: [(0, react_jsx_runtime.jsx)("div", { style: { position: "sticky", top: 0, background: "var(--dsw-specific-menu)", padding: "4px 6px", height: 28, boxSizing: "border-box", color: "var(--dsw-alias-label-secondary)", fontSize: 12, fontWeight: 600 }, children: t("menu.model") }), activeGroup.models.map((model) => {
+								children: [(0, react_jsx_runtime.jsx)("div", { style: { position: "sticky", top: 0, background: "var(--dsw-alias-bg-layer-1)", padding: "4px 6px", height: 28, boxSizing: "border-box", color: "var(--dsw-alias-label-secondary)", fontSize: 12, fontWeight: 600 }, children: t("menu.model") }), activeGroup.models.map((model) => {
 									const selected = state.current?.provider === activeGroup.id && state.current.model === model.id;
 									return (0, react_jsx_runtime.jsxs)("button", {
 										ref: itemRef(), type: "button", role: "menuitemradio", "aria-checked": selected, className: clsx(ModelSelect_module_css_default.option, selected && ModelSelect_module_css_default.selected), title: model.name ?? model.id, disabled: busy,
