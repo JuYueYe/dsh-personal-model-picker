@@ -1,0 +1,48 @@
+{
+  "name": "dsh-reasoning-effort",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.cjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "description": "Adds a per-model reasoning-effort editor to each pi-ai provider card on the official DSH Settings -> Models page.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "ui",
+    "settings",
+    "reasoning-effort"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs && node scripts/selftest.mjs",
+    "check": "node --check dist/index.js && node --check dist/client.cjs"
+  }
+}
