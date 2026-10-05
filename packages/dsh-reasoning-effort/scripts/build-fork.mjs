@@ -118,6 +118,85 @@ patch("ModelRow slot", `\t\t\t\t\t\tonChange: props.onChange
 \t\t\t\t\t})]
 \t\t\t\t}) : null]`);
 
+// --- 3b. bulk thinking, above the pi-ai model list -----------------------------
+const BULK = `\t\t/**
+\t\t* Enable the default level set on several rows at once. Selecting only
+\t\t* declaration-less rows keeps an existing choice untouched; like every other
+\t\t* edit it rides the list's own \`onChange\`.
+\t\t* @param props - the catalog rows plus the list-replacement action.
+\t\t* @returns the bulk control.
+\t\t*/
+\t\tfunction ModelBulk({ models, disabled, t, onChange }) {
+\t\t\tconst [open, setOpen] = (0, react.useState)(false);
+\t\t\tconst [picked, setPicked] = (0, react.useState)(() => []);
+\t\t\tconst eligible = models.map((model, index) => model !== null && typeof model === "object" && !(model.reasoningEfforts !== void 0 && model.reasoningEfforts !== false && Object.keys(model.reasoningEfforts).length > 0) ? index : -1).filter((index) => index >= 0);
+\t\t\tconst apply = () => {
+\t\t\t\tonChange(models.map((model, index) => picked.includes(index) ? {
+\t\t\t\t\t...model ?? {},
+\t\t\t\t\treasoningEfforts: reasoningEffortsOf(REASONING_DEFAULT_LEVELS)
+\t\t\t\t} : model));
+\t\t\t\tsetOpen(false);
+\t\t\t\tsetPicked([]);
+\t\t\t};
+\t\t\tconst link = (label, action, off) => (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\ttype: "button",
+\t\t\t\tclassName: ModelsSection_module_css_default["linkButton"],
+\t\t\t\tdisabled: disabled || off,
+\t\t\t\tonClick: action,
+\t\t\t\tchildren: label
+\t\t\t});
+\t\t\treturn (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\tchildren: [link(t("bulkThinking"), () => {
+\t\t\t\t\tsetOpen(!open);
+\t\t\t\t\tsetPicked([]);
+\t\t\t\t}, eligible.length === 0), open ? (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t\tstyle: {
+\t\t\t\t\t\tpadding: 12,
+\t\t\t\t\t\tborder: "1px solid var(--dsw-alias-border-l1)",
+\t\t\t\t\t\tborderRadius: 12,
+\t\t\t\t\t\tmargin: "8px 0"
+\t\t\t\t\t},
+\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("p", {
+\t\t\t\t\t\tchildren: t("bulkHint")
+\t\t\t\t\t}), link(t("bulkSelectAll"), () => setPicked([...eligible])), " ", link(t("bulkClear"), () => setPicked([])), (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\t\tstyle: {
+\t\t\t\t\t\t\tmaxHeight: 240,
+\t\t\t\t\t\t\toverflowY: "auto"
+\t\t\t\t\t\t},
+\t\t\t\t\t\tchildren: eligible.map((index) => (0, react_jsx_runtime.jsxs)("label", {
+\t\t\t\t\t\t\tstyle: {
+\t\t\t\t\t\t\t\tdisplay: "flex",
+\t\t\t\t\t\t\t\tgap: 8,
+\t\t\t\t\t\t\t\tpadding: 5
+\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("input", {
+\t\t\t\t\t\t\t\ttype: "checkbox",
+\t\t\t\t\t\t\t\tdisabled,
+\t\t\t\t\t\t\t\tchecked: picked.includes(index),
+\t\t\t\t\t\t\t\tonChange: (event) => setPicked(event.target.checked ? [...picked, index] : picked.filter((at) => at !== index))
+\t\t\t\t\t\t\t}), models[index]?.name ?? models[index]?.id ?? String(index + 1)]
+\t\t\t\t\t\t}, String(index)))
+\t\t\t\t\t}), link(t("bulkApply", {
+\t\t\t\t\t\tcount: picked.length
+\t\t\t\t\t}), apply, picked.length === 0), " ", link(t("bulkCancel"), () => setOpen(false))]}) : null]
+\t\t\t});
+\t\t}
+\t\t//#region lib/types/client/ModelRow.js`;
+
+patch("ModelBulk component", "\t\t//#region lib/types/client/ModelRow.js", BULK);
+
+patch("bulk placement", `\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelList"],
+\t\t\t\t\t\tchildren: models.map((model, index) => (0, react_jsx_runtime.jsx)(ModelRow, {`, `\t\t\t\t\t(0, react_jsx_runtime.jsx)(ModelBulk, {
+\t\t\t\t\t\tmodels,
+\t\t\t\t\t\tdisabled,
+\t\t\t\t\t\tt,
+\t\t\t\t\t\tonChange
+\t\t\t\t\t}),
+\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelList"],
+\t\t\t\t\t\tchildren: models.map((model, index) => (0, react_jsx_runtime.jsx)(ModelRow, {`);
+
 // --- 4. feed it from the pi-ai editor (not the DeepSeek catalog) ---------------
 patch("pi-ai row wiring", `\t\t\t\t\t\t\tonChange: (next) => {
 \t\t\t\t\t\t\t\tonChange(models.map((row, at) => at === index ? next : row));
@@ -129,6 +208,12 @@ patch("pi-ai row wiring", `\t\t\t\t\t\t\tonChange: (next) => {
 // --- 5. dictionaries -----------------------------------------------------------
 const EN_KEYS = `\t\t\tthinkingMode: "Thinking mode",
 \t\t\tthinkingLevels: "Thinking levels",
+\t\t\tbulkThinking: "Enable thinking in bulk",
+\t\t\tbulkHint: "Tick the models you have confirmed support reasoning. Rows that already declare levels keep them; ticking only declares capability, it does not mean the endpoint accepts it.",
+\t\t\tbulkSelectAll: "Select models without levels",
+\t\t\tbulkClear: "Clear selection",
+\t\t\tbulkApply: "Enable selected ({count})",
+\t\t\tbulkCancel: "Cancel",
 \t\t\t"level.off": "off（关闭）",
 \t\t\t"level.minimal": "minimal（最低）",
 \t\t\t"level.low": "low（低）",
@@ -137,7 +222,22 @@ const EN_KEYS = `\t\t\tthinkingMode: "Thinking mode",
 \t\t\t"level.xhigh": "xhigh（很高）",
 \t\t\t"level.max": "max（最高）",
 `;
-const ZH_KEYS = EN_KEYS.replace('"Thinking mode"', '"思考模式"').replace('"Thinking levels"', '"思考档位"');
+const ZH_KEYS = `\t\t\tthinkingMode: "思考模式",
+\t\t\tthinkingLevels: "思考档位",
+\t\t\tbulkThinking: "批量开启思考模式",
+\t\t\tbulkHint: "请选择确认支持推理的模型。已有等级配置保持不变；勾选只声明能力，不代表端点实际支持。",
+\t\t\tbulkSelectAll: "全选未开启模型",
+\t\t\tbulkClear: "取消全选",
+\t\t\tbulkApply: "开启所选（{count}）",
+\t\t\tbulkCancel: "取消",
+\t\t\t"level.off": "off（关闭）",
+\t\t\t"level.minimal": "minimal（最低）",
+\t\t\t"level.low": "low（低）",
+\t\t\t"level.medium": "medium（中）",
+\t\t\t"level.high": "high（高）",
+\t\t\t"level.xhigh": "xhigh（很高）",
+\t\t\t"level.max": "max（最高）",
+`;
 patch("en dictionary", '\t\t\tmodelInputImage: "Image",\n', `\t\t\tmodelInputImage: "Image",\n${EN_KEYS}`);
 patch("zh dictionary", '\t\t\tmodelInputImage: "图片",\n', `\t\t\tmodelInputImage: "图片",\n${ZH_KEYS}`);
 

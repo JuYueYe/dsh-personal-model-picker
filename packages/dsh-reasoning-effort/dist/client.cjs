@@ -270,6 +270,68 @@ window.__ModuleLoader__.load({
 				}) : null]
 			});
 		}
+		/**
+		* Enable the default level set on several rows at once. Selecting only
+		* declaration-less rows keeps an existing choice untouched; like every other
+		* edit it rides the list's own `onChange`.
+		* @param props - the catalog rows plus the list-replacement action.
+		* @returns the bulk control.
+		*/
+		function ModelBulk({ models, disabled, t, onChange }) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [picked, setPicked] = (0, react.useState)(() => []);
+			const eligible = models.map((model, index) => model !== null && typeof model === "object" && !(model.reasoningEfforts !== void 0 && model.reasoningEfforts !== false && Object.keys(model.reasoningEfforts).length > 0) ? index : -1).filter((index) => index >= 0);
+			const apply = () => {
+				onChange(models.map((model, index) => picked.includes(index) ? {
+					...model ?? {},
+					reasoningEfforts: reasoningEffortsOf(REASONING_DEFAULT_LEVELS)
+				} : model));
+				setOpen(false);
+				setPicked([]);
+			};
+			const link = (label, action, off) => (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: ModelsSection_module_css_default["linkButton"],
+				disabled: disabled || off,
+				onClick: action,
+				children: label
+			});
+			return (0, react_jsx_runtime.jsxs)("div", {
+				children: [link(t("bulkThinking"), () => {
+					setOpen(!open);
+					setPicked([]);
+				}, eligible.length === 0), open ? (0, react_jsx_runtime.jsxs)("div", {
+					style: {
+						padding: 12,
+						border: "1px solid var(--dsw-alias-border-l1)",
+						borderRadius: 12,
+						margin: "8px 0"
+					},
+					children: [(0, react_jsx_runtime.jsx)("p", {
+						children: t("bulkHint")
+					}), link(t("bulkSelectAll"), () => setPicked([...eligible])), " ", link(t("bulkClear"), () => setPicked([])), (0, react_jsx_runtime.jsx)("div", {
+						style: {
+							maxHeight: 240,
+							overflowY: "auto"
+						},
+						children: eligible.map((index) => (0, react_jsx_runtime.jsxs)("label", {
+							style: {
+								display: "flex",
+								gap: 8,
+								padding: 5
+							},
+							children: [(0, react_jsx_runtime.jsx)("input", {
+								type: "checkbox",
+								disabled,
+								checked: picked.includes(index),
+								onChange: (event) => setPicked(event.target.checked ? [...picked, index] : picked.filter((at) => at !== index))
+							}), models[index]?.name ?? models[index]?.id ?? String(index + 1)]
+						}, String(index)))
+					}), link(t("bulkApply", {
+						count: picked.length
+					}), apply, picked.length === 0), " ", link(t("bulkCancel"), () => setOpen(false))]}) : null]
+			});
+		}
 		//#region lib/types/client/ModelRow.js
 		/**
 		* Render consistent model identity, capacity, and input-type controls.
@@ -838,6 +900,12 @@ window.__ModuleLoader__.load({
 						className: ModelsSection_module_css_default["modelEmpty"],
 						children: t("modelsEmpty")
 					}) : null,
+					(0, react_jsx_runtime.jsx)(ModelBulk, {
+						models,
+						disabled,
+						t,
+						onChange
+					}),
 					(0, react_jsx_runtime.jsx)("div", {
 						className: ModelsSection_module_css_default["modelList"],
 						children: models.map((model, index) => (0, react_jsx_runtime.jsx)(ModelRow, {
@@ -2980,6 +3048,12 @@ window.__ModuleLoader__.load({
 			modelInputImage: "Image",
 			thinkingMode: "Thinking mode",
 			thinkingLevels: "Thinking levels",
+			bulkThinking: "Enable thinking in bulk",
+			bulkHint: "Tick the models you have confirmed support reasoning. Rows that already declare levels keep them; ticking only declares capability, it does not mean the endpoint accepts it.",
+			bulkSelectAll: "Select models without levels",
+			bulkClear: "Clear selection",
+			bulkApply: "Enable selected ({count})",
+			bulkCancel: "Cancel",
 			"level.off": "off（关闭）",
 			"level.minimal": "minimal（最低）",
 			"level.low": "low（低）",
@@ -3105,6 +3179,12 @@ window.__ModuleLoader__.load({
 			modelInputImage: "图片",
 			thinkingMode: "思考模式",
 			thinkingLevels: "思考档位",
+			bulkThinking: "批量开启思考模式",
+			bulkHint: "请选择确认支持推理的模型。已有等级配置保持不变；勾选只声明能力，不代表端点实际支持。",
+			bulkSelectAll: "全选未开启模型",
+			bulkClear: "取消全选",
+			bulkApply: "开启所选（{count}）",
+			bulkCancel: "取消",
 			"level.off": "off（关闭）",
 			"level.minimal": "minimal（最低）",
 			"level.low": "low（低）",
