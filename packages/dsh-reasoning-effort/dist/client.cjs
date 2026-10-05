@@ -60,6 +60,7 @@ const zh = {
 	"card.configApplied": "已配置 {count} 个模型。",
 	"card.configFailed": "获取配置失败：{message}",
 	"card.discoverFailed": "无法读取模型列表：{message}",
+	"card.noLlm": "这个版本没有提供模型发现接口（remote.llm），无法询问端点。",
 	"level.off": "off（关闭）",
 	"level.minimal": "minimal（最低）",
 	"level.low": "low（低）",
@@ -121,6 +122,7 @@ const en = {
 	"card.configApplied": "Configured {count} model(s).",
 	"card.configFailed": "Fetching config failed: {message}",
 	"card.discoverFailed": "Could not read the model list: {message}",
+	"card.noLlm": "This build exposes no model-discovery face (remote.llm), so the endpoint cannot be asked.",
 	"level.off": "off（关闭）",
 	"level.minimal": "minimal（最低）",
 	"level.low": "low（低）",
@@ -561,8 +563,10 @@ function Switch(props) {
 function EffortEditor(props) {
 	const provider = props.provider !== null && typeof props.provider === "object" ? props.provider : {};
 	const settings = props.settings;
-	const session = props.session;
-	const llm = props.llm;
+	// Optional faces arrive as getters: the plugin declares them with their own
+	// inject waits, so they can appear after this seat is already registered.
+	const getSession = typeof props.getSession === "function" ? props.getSession : () => void 0;
+	const getLlm = typeof props.getLlm === "function" ? props.getLlm : () => void 0;
 	const t = props.t;
 	const ns = typeof provider.settingsNs === "string" ? provider.settingsNs : "";
 	const route = typeof provider.provider === "string" ? provider.provider : "";
@@ -819,7 +823,11 @@ function EffortEditor(props) {
 	};
 	/** Ask the Host to interrogate the provider endpoint for its model list. */
 	const discover = async () => {
-		if (llm === void 0) return void 0;
+		const llm = getLlm();
+		if (llm === void 0) {
+			patch({ error: t("card.noLlm") });
+			return void 0;
+		}
 		const response = await llm.discoverModels(ns, {
 			provider: route,
 			...typeof state.config.baseURL === "string" && state.config.baseURL !== "" ? { baseURL: state.config.baseURL } : {},
@@ -833,6 +841,7 @@ function EffortEditor(props) {
 	};
 	/** The catalog the adapter already keeps for this provider, indexed by model id. */
 	const catalogFor = async () => {
+		const session = getSession();
 		if (session === void 0) return new Map();
 		try {
 			const response = await session.modelCatalog();
@@ -1519,6 +1528,12 @@ const inject = [
  * Client plugin body: register the dictionaries, then fill the provider-card
  * seat. The seat belongs to the settings-models page, so `slots.inject` waits
  * for that page's declaration instead of assuming load order.
+ *
+ * The two optional faces (`remote.llm`, `remote.session`) are filled by their
+ * own `ctx.inject` waits and handed to the editor through getters. They must be
+ * *declared* before they are read: Cordis refuses an undeclared service access,
+ * so poking `scope.remote.llm` from the seat's own scope would silently yield
+ * nothing — which is exactly how the first fetch-models build failed.
  * @param ctx - client root context.
  */
 function apply(ctx) {
@@ -1527,23 +1542,27 @@ function apply(ctx) {
 		en
 	}), "dsh-reasoning-effort: dictionaries");
 	const t = ctx.locale.bind(NS);
+	/** Live optional faces; the editor reads them at click time. */
+	const faces = {};
+	const readThrough = (scope, name) => () => {
+		try {
+			return scope.remote[name];
+		} catch {
+			return void 0;
+		}
+	};
+	ctx.inject(["remote.llm"], (scope) => {
+		faces.llm = readThrough(scope, "llm");
+	});
+	ctx.inject(["remote.session"], (scope) => {
+		faces.session = readThrough(scope, "session");
+	});
 	ctx.inject(["slots", "remote.settings"], (scope) => {
-		// `remote.session` (the adapter's model catalog) and `remote.llm`
-		// (endpoint discovery) are mounted by the same api-remotes entry as
-		// `remote.settings`, but they are read defensively: the editor degrades to
-		// the settings document alone when either is missing.
-		const read = (name) => {
-			try {
-				return scope.remote[name];
-			} catch {
-				return void 0;
-			}
-		};
 		const Cell = (props) => h(EffortEditor, {
 			...props,
 			settings: scope.remote.settings,
-			session: read("session"),
-			llm: read("llm"),
+			getLlm: () => faces.llm?.(),
+			getSession: () => faces.session?.(),
 			t
 		});
 		scope.slots.inject(PROVIDER_CARD_SLOT, () => scope.slots.register({

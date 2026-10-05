@@ -354,8 +354,10 @@ function Switch(props) {
 function EffortEditor(props) {
 	const provider = props.provider !== null && typeof props.provider === "object" ? props.provider : {};
 	const settings = props.settings;
-	const session = props.session;
-	const llm = props.llm;
+	// Optional faces arrive as getters: the plugin declares them with their own
+	// inject waits, so they can appear after this seat is already registered.
+	const getSession = typeof props.getSession === "function" ? props.getSession : () => void 0;
+	const getLlm = typeof props.getLlm === "function" ? props.getLlm : () => void 0;
 	const t = props.t;
 	const ns = typeof provider.settingsNs === "string" ? provider.settingsNs : "";
 	const route = typeof provider.provider === "string" ? provider.provider : "";
@@ -612,7 +614,11 @@ function EffortEditor(props) {
 	};
 	/** Ask the Host to interrogate the provider endpoint for its model list. */
 	const discover = async () => {
-		if (llm === void 0) return void 0;
+		const llm = getLlm();
+		if (llm === void 0) {
+			patch({ error: t("card.noLlm") });
+			return void 0;
+		}
 		const response = await llm.discoverModels(ns, {
 			provider: route,
 			...typeof state.config.baseURL === "string" && state.config.baseURL !== "" ? { baseURL: state.config.baseURL } : {},
@@ -626,6 +632,7 @@ function EffortEditor(props) {
 	};
 	/** The catalog the adapter already keeps for this provider, indexed by model id. */
 	const catalogFor = async () => {
+		const session = getSession();
 		if (session === void 0) return new Map();
 		try {
 			const response = await session.modelCatalog();

@@ -814,6 +814,32 @@ check("adopting appends the new model", equal(adopted?.at(-1), {
 check("adopting keeps every existing row", adopted?.length === MODELS.length + 1, String(adopted?.length));
 
 console.log("edge states");
+// Regression: an undeclared `remote.llm` must fail loudly, not silently.
+const savedLlm = fakeScope.remote.llm;
+fakeScope.remote.llm = void 0;
+descriptor = {
+	ns: "llm-pi-ai",
+	revision: 20,
+	value: {
+		providers: {
+			a9527: { models: MODELS }
+		}
+	}
+};
+settings.describe = async () => ({
+	ok: true,
+	value: {
+		writable: true,
+		namespaces: [descriptor]
+	}
+});
+await mount();
+byText(tree, dict.zh["card.fetchModels"])[0].props.onClick();
+await tick();
+await tick();
+render();
+check("a missing discovery face reports an error", byType(tree, "p").some((node) => node.props.children === dict.zh["card.noLlm"]), JSON.stringify(byType(tree, "p").map((node) => node.props.children)));
+fakeScope.remote.llm = savedLlm;
 settings.describe = async () => ({
 	ok: false,
 	error: {

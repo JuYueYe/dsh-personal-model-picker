@@ -105,11 +105,13 @@ npm run check   # 语法检查
 |---|---|
 | 实测基线 | DSH 核心 `0.2.0-rc.2`（官方桌面端 nightly） |
 | 宿主半 | 惰性（`export function apply() {}`）——界面全在客户端半 |
-| 客户端注入 | `slots`、`remote`、`remote.settings`、`locale` |
-| 客户端依赖 | `@deepseek-ai/dsh-client-locale`、`@deepseek-ai/dsh-api-remotes` |
+| 客户端注入 | `slots`、`remote`、`remote.settings`、`locale`（必需）；`remote.llm`、`remote.session`（**可选**，各自用一个 `ctx.inject` 等，等不到就只少「获取可用模型 / 自动配置」） |
+| 客户端依赖 | `@deepseek-ai/dsh-client-locale`、`@deepseek-ai/dsh-api-remotes`、`@deepseek-ai/dsh-api-session-controller` |
 | `peerDependencies` | 刻意不写——写了会被兼容性检查按 semver 判不兼容并静默跳过 |
 
-`remote.settings` 由 `@deepseek-ai/dsh-api-remotes` 统一挂载（它 import 各 controller 的 `/remote` 模块），所以它一定存在于 Web 客户端。
+`remote.settings` / `remote.llm` / `remote.session` 都由 `@deepseek-ai/dsh-api-remotes` 统一挂载（它 import 各 controller 的 `/remote` 模块），所以它们一定存在于 Web 客户端。
+
+> **一个踩过的坑**：Cordis 会**拒绝访问没有在 `inject` 里声明的服务**。早期版本只在座位作用域里声明了 `remote.settings`，却直接读 `scope.remote.llm`，异常被 `try/catch` 吞掉，表现为「点了获取可用模型没反应」。现在两个可选面各自用 `ctx.inject` 等待、并通过作用域**实时**读取（服务卸载后自动复位），读不到时会在卡片里**明确报错**而不是静默。
 
 ## 许可
 

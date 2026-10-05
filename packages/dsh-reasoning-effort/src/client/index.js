@@ -14,6 +14,12 @@ const inject = [
  * Client plugin body: register the dictionaries, then fill the provider-card
  * seat. The seat belongs to the settings-models page, so `slots.inject` waits
  * for that page's declaration instead of assuming load order.
+ *
+ * The two optional faces (`remote.llm`, `remote.session`) are filled by their
+ * own `ctx.inject` waits and handed to the editor through getters. They must be
+ * *declared* before they are read: Cordis refuses an undeclared service access,
+ * so poking `scope.remote.llm` from the seat's own scope would silently yield
+ * nothing — which is exactly how the first fetch-models build failed.
  * @param ctx - client root context.
  */
 function apply(ctx) {
@@ -22,23 +28,27 @@ function apply(ctx) {
 		en
 	}), "dsh-reasoning-effort: dictionaries");
 	const t = ctx.locale.bind(NS);
+	/** Live optional faces; the editor reads them at click time. */
+	const faces = {};
+	const readThrough = (scope, name) => () => {
+		try {
+			return scope.remote[name];
+		} catch {
+			return void 0;
+		}
+	};
+	ctx.inject(["remote.llm"], (scope) => {
+		faces.llm = readThrough(scope, "llm");
+	});
+	ctx.inject(["remote.session"], (scope) => {
+		faces.session = readThrough(scope, "session");
+	});
 	ctx.inject(["slots", "remote.settings"], (scope) => {
-		// `remote.session` (the adapter's model catalog) and `remote.llm`
-		// (endpoint discovery) are mounted by the same api-remotes entry as
-		// `remote.settings`, but they are read defensively: the editor degrades to
-		// the settings document alone when either is missing.
-		const read = (name) => {
-			try {
-				return scope.remote[name];
-			} catch {
-				return void 0;
-			}
-		};
 		const Cell = (props) => h(EffortEditor, {
 			...props,
 			settings: scope.remote.settings,
-			session: read("session"),
-			llm: read("llm"),
+			getLlm: () => faces.llm?.(),
+			getSession: () => faces.session?.(),
 			t
 		});
 		scope.slots.inject(PROVIDER_CARD_SLOT, () => scope.slots.register({
