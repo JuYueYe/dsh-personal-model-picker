@@ -13,15 +13,16 @@
     "dist",
     "src",
     "scripts",
+    "vendor",
     "cordis.patch.yml",
     "README.md"
   ],
   "dsh": {
     "client": {
       "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-api-remotes",
-        "@deepseek-ai/dsh-api-session-controller"
+        "@deepseek-ai/dsh-api-remotes"
       ],
       "platform": "web"
     },
@@ -42,8 +43,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "test": "node scripts/build.mjs && node scripts/selftest.mjs",
+    "build": "node scripts/build-fork.mjs",
+    "build:additive": "node scripts/build.mjs",
+    "test": "node scripts/build-fork.mjs && node scripts/build.mjs && node scripts/fork-smoke.mjs && node scripts/selftest.mjs",
     "check": "node --check dist/index.js && node --check dist/client.cjs"
   }
 }

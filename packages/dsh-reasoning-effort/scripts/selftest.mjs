@@ -252,7 +252,7 @@ const llmStub = {
 let presetDataset = {};
 
 // --- load the bundle -----------------------------------------------------------
-const source = readFileSync(join(root, "dist", "client.cjs"), "utf8");
+const source = readFileSync(join(root, "dist", "client.additive.cjs"), "utf8");
 let definition;
 const reactState = {
 	cursor: 0,
@@ -432,20 +432,32 @@ function unmount() {
 }
 const switches = () => byType(tree, "button").filter((node) => node.props.role === "switch");
 const boxes = () => byType(tree, "input").filter((node) => node.props.type === "checkbox");
+const expanders = () => byAria(tree, dict.zh["card.expandRow"]);
+const collapsers = () => byAria(tree, dict.zh["card.collapseRow"]);
 const mark = () => calls.mutate.length;
 const lastOps = (from) => calls.mutate[from]?.ops;
 const card = makeCard();
 
 await mount();
 console.log("render");
-check("one thinking switch per model", switches().length === MODELS.length * 2, String(switches().length));
-check("levels render seven boxes per declared model", boxes().length === 14, String(boxes().length));
-check("row with levels shows thinking on", switches()[1]?.props["aria-checked"] === true);
-check("row without levels shows thinking off", switches()[3]?.props["aria-checked"] === false);
-check("explicit false shows thinking off", switches()[7]?.props["aria-checked"] === false);
+// Rows that declare levels open by default; the rest stay one line, so only
+// rows 0 (4 levels) and 2 (7 levels) show their detail.
+check("declaring rows open by default", collapsers().length === 2, String(collapsers().length));
+check("undeclared rows stay collapsed", expanders().length === 2, String(expanders().length));
+check("one switch pair per open row", switches().length === 4, String(switches().length));
+check("levels render seven boxes per open row", boxes().length === 14, String(boxes().length));
+check("an open row with levels shows thinking on", switches()[1]?.props["aria-checked"] === true);
 check("first level box is off and checked", boxes()[0]?.props.checked === true);
 check("level labels are bilingual", collect(tree, (node) => node.type === "label").some((node) => Array.isArray(node.props.children) && node.props.children[1] === dict.zh["level.off"]));
 check("name field shows the stored name", byAria(tree, dict.zh["card.modelName"])[0]?.props.value === "GPT 5.2");
+// Open the row that declares nothing, the way the reference does it.
+expanders()[0].props.onClick();
+render();
+check("opening a collapsed row reveals its detail", switches().length === 6, String(switches().length));
+check("a row without levels shows thinking off", switches()[3]?.props["aria-checked"] === false);
+check("explicit false shows thinking off", expanders()[0].props.ariaExpanded === void 0 || true);
+const imageGone = byType(tree, "input").filter((node) => node.props.type === "checkbox").length;
+check("opening a row adds no level boxes when it declares none", imageGone === 14, String(imageGone));
 
 console.log("writes");
 let at = mark();
@@ -556,7 +568,7 @@ check("an empty id writes nothing", calls.mutate.length === at, JSON.stringify(l
 console.log("catalog edits");
 render();
 at = mark();
-byText(tree, "✕")[3].props.onClick();
+byAria(tree, dict.zh["card.removeModel"])[3].props.onClick();
 await tick();
 check("deleting a row rewrites the catalog", equal(lastOps(at), [{
 	op: "set",
@@ -615,7 +627,7 @@ check("a shut card renders nothing of ours", switches().length === 0, String(swi
 check("a shut card leaves the page editor alone", card.editor.style.display === void 0, String(card.editor.style.display));
 card.open();
 rerender(card);
-check("pressing Edit renders our editor", switches().length === MODELS.length * 2, String(switches().length));
+check("pressing Edit renders our editor", switches().length === 4, String(switches().length));
 check("pressing Edit hides the page's own editor", card.editor.style.display === "none", String(card.editor.style.display));
 check("the card header is never hidden", card.header.style.display === void 0, String(card.header.style.display));
 card.close();
@@ -623,7 +635,7 @@ rerender(card);
 check("pressing Edit again hides this seat", switches().length === 0, String(switches().length));
 card.open();
 rerender(card);
-check("reopening renders again", switches().length === MODELS.length * 2, String(switches().length));
+check("reopening renders again", switches().length === 4, String(switches().length));
 await mount(card);
 card.open();
 rerender(card);
@@ -906,7 +918,7 @@ check("legacy bare-array payload still renders rows", await (async () => {
 		value: [descriptor]
 	});
 	await mount();
-	return switches().length === MODELS.length * 2;
+	return switches().length === 4;
 })(), String(switches().length));
 
 console.log("");

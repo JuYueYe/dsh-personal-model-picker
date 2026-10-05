@@ -19,5 +19,5 @@ return module.exports;}});
 `;
 
 mkdirSync(join(root, "dist"), { recursive: true });
-writeFileSync(join(root, "dist", "client.cjs"), bundle, "utf8");
+writeFileSync(join(root, "dist", "client.additive.cjs"), bundle, "utf8");
 console.log(`dist/client.cjs written: ${String(Buffer.byteLength(bundle))} bytes`);

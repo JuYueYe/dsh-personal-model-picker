@@ -1,3 +1,9 @@
+# Replace the shipped Models page with the forked copy built by
+# `scripts/build-fork.mjs`: identical to the official page except for the
+# reasoning-effort controls. Disabling the official row is what makes the fork
+# the page; removing this line restores the official page untouched.
+- id: ui-settings-models
+  disabled: true
 - insert:
     - id: dsh-reasoning-effort
       name: dsh-reasoning-effort

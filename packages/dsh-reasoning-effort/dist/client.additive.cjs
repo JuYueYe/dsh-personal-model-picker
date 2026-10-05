@@ -1,3 +1,226 @@
+window.__ModuleLoader__.load({id:"dsh-reasoning-effort",factory:(require)=>{const module={exports:{}};const exports=module.exports;
+//#region src/client/imports.js
+let react = require("react");
+//#endregion
+
+//#region src/client/locales.js
+//#region locales
+/** Dictionary namespace owned by this plugin. */
+const NS = "reasoning-effort";
+/** Simplified Chinese dictionary (the key-set source of truth). */
+const zh = {
+	"card.title": "模型目录",
+	"card.inherited": "正在使用适配器默认模型",
+	"card.customized": "已自定义模型目录",
+	"card.empty": "该提供商尚未自定义模型目录。请先用官方卡片（点「编辑」）保存一次模型列表，这里才会接管编辑。",
+	"card.loading": "正在读取配置…",
+	"card.readError": "读取失败：{message}",
+	"card.noNamespace": "配置里找不到 {ns} 这一项。",
+	"card.noRemote": "当前版本没有提供 settings 远程接口，无法读取或写入。",
+	"card.saved": "已保存",
+	"card.conflict": "配置已被别处修改，已重新读取，请再试一次。",
+	"card.writeError": "保存失败：{message}",
+	"card.model": "模型",
+	"card.modelId": "模型 ID",
+	"card.modelName": "显示名称",
+	"card.modelNamePlaceholder": "留空时使用模型 ID",
+	"card.contextWindow": "上下文窗口",
+	"card.maxTokens": "最大输出 token",
+	"card.capacityPlaceholder": "使用提供商默认值",
+	"card.imageInput": "支持图片输入",
+	"card.thinkingMode": "思考模式",
+	"card.thinkingLevels": "思考档位",
+	"card.addModel": "添加模型",
+	"card.addModelId": "新模型 ID",
+	"card.removeModel": "删除模型",
+	"card.invalidCapacity": "容量需为数字，可加 K 或 M 后缀。",
+	"card.bulk": "批量开启思考模式",
+	"card.bulkHint": "请选择确认支持推理的模型。已有等级配置保持不变；勾选只声明能力，不代表端点实际支持。",
+	"card.bulkSelectAll": "全选未开启模型",
+	"card.bulkClear": "取消全选",
+	"card.bulkApply": "开启所选（{count}）",
+	"card.bulkNone": "所有模型都已声明思考档位。",
+	"card.bulkDone": "已为 {count} 个模型开启思考模式。",
+	"card.bulkCancel": "取消",
+	"card.fetchModels": "获取可用模型",
+	"card.fetchModelsHint": "询问端点它提供了哪些模型",
+	"card.fetching": "正在询问端点…",
+	"card.fetchHint": "以下是端点列出的模型。勾选要加入目录的模型；已存在的 ID 会跳过。",
+	"card.fetchSearch": "搜索模型",
+	"card.fetchSelectAll": "全选",
+	"card.fetchDeselectAll": "取消全选",
+	"card.fetchNoMatch": "没有匹配的模型。",
+	"card.fetchAdopt": "添加所选（{count}）",
+	"card.adopted": "已添加 {count} 个模型。",
+	"card.autoConfigure": "自动配置所有模型",
+	"card.autoConfigureHint": "为每个模型补齐上下文窗口、输出上限、图片与思考档位；已有值不动",
+	"card.fetchConfig": "获取配置",
+	"card.fetchConfigHint": "为这个模型补齐上限、图片与思考档位；已有值不动",
+	"card.configNone": "端点与模型能力表都没有可写入的配置；已有值保持不变。",
+	"card.configApplied": "已配置 {count} 个模型。",
+	"card.configFailed": "获取配置失败：{message}",
+	"card.discoverFailed": "无法读取模型列表：{message}",
+	"card.noLlm": "这个版本没有提供模型发现接口（remote.llm），无法询问端点。",
+	"card.resetModels": "恢复默认模型",
+	"card.resetHint": "删除整份自定义模型目录，回到适配器默认；其中的思考档位也会一并消失。",
+	"card.resetConfirm": "恢复默认模型？",
+	"card.resetYes": "恢复",
+	"card.resetDone": "已恢复默认模型目录。",
+	"card.expandRow": "展开这一行",
+	"card.collapseRow": "收起这一行",
+	"level.off": "off（关闭）",
+	"level.minimal": "minimal（最低）",
+	"level.low": "low（低）",
+	"level.medium": "medium（中）",
+	"level.high": "high（高）",
+	"level.xhigh": "xhigh（很高）",
+	"level.max": "max（最高）"
+};
+/** English dictionary, checked complete against the zh key set. */
+const en = {
+	"card.title": "Model catalog",
+	"card.inherited": "Using the adapter defaults",
+	"card.customized": "Customized model catalog",
+	"card.empty": "This provider has no custom model catalog yet. Save one from the official card (press Edit) first; this editor takes over afterwards.",
+	"card.loading": "Reading configuration…",
+	"card.readError": "Read failed: {message}",
+	"card.noNamespace": "No {ns} entry exists in the configuration.",
+	"card.noRemote": "This build exposes no settings remote, so nothing can be read or written.",
+	"card.saved": "Saved",
+	"card.conflict": "The configuration changed elsewhere; it was reread — try again.",
+	"card.writeError": "Save failed: {message}",
+	"card.model": "Model",
+	"card.modelId": "Model ID",
+	"card.modelName": "Display name",
+	"card.modelNamePlaceholder": "Uses the model ID when empty",
+	"card.contextWindow": "Context window",
+	"card.maxTokens": "Max output tokens",
+	"card.capacityPlaceholder": "Uses the provider default",
+	"card.imageInput": "Image input",
+	"card.thinkingMode": "Thinking mode",
+	"card.thinkingLevels": "Thinking levels",
+	"card.addModel": "Add model",
+	"card.addModelId": "New model ID",
+	"card.removeModel": "Delete model",
+	"card.invalidCapacity": "A capacity must be a number, optionally suffixed K or M.",
+	"card.bulk": "Enable thinking in bulk",
+	"card.bulkHint": "Tick the models you have confirmed support reasoning. Models that already declare levels keep them; ticking only declares capability, it does not mean the endpoint accepts it.",
+	"card.bulkSelectAll": "Select models without levels",
+	"card.bulkClear": "Clear selection",
+	"card.bulkApply": "Enable selected ({count})",
+	"card.bulkNone": "Every model already declares thinking levels.",
+	"card.bulkDone": "Enabled thinking mode for {count} model(s).",
+	"card.bulkCancel": "Cancel",
+	"card.fetchModels": "Fetch available models",
+	"card.fetchModelsHint": "Ask the endpoint which models it advertises",
+	"card.fetching": "Asking the endpoint…",
+	"card.fetchHint": "These are the models the endpoint advertises. Tick the ones to add; existing IDs are skipped.",
+	"card.fetchSearch": "Search models",
+	"card.fetchSelectAll": "Select all",
+	"card.fetchDeselectAll": "Deselect all",
+	"card.fetchNoMatch": "No matching models.",
+	"card.fetchAdopt": "Add selected ({count})",
+	"card.adopted": "Added {count} model(s).",
+	"card.autoConfigure": "Configure all models",
+	"card.autoConfigureHint": "Fill in context window, output cap, image input and thinking levels for every model; existing values are kept",
+	"card.fetchConfig": "Fetch config",
+	"card.fetchConfigHint": "Fill in this model's caps, image input and thinking levels; existing values are kept",
+	"card.configNone": "Neither the endpoint nor the capability table had anything to write; existing values are unchanged.",
+	"card.configApplied": "Configured {count} model(s).",
+	"card.configFailed": "Fetching config failed: {message}",
+	"card.discoverFailed": "Could not read the model list: {message}",
+	"card.noLlm": "This build exposes no model-discovery face (remote.llm), so the endpoint cannot be asked.",
+	"card.resetModels": "Restore defaults",
+	"card.resetHint": "Delete the whole custom catalog and fall back to the adapter defaults; the thinking levels it declares go with it.",
+	"card.resetConfirm": "Restore the default catalog?",
+	"card.resetYes": "Restore",
+	"card.resetDone": "Restored the default model catalog.",
+	"card.expandRow": "Expand this row",
+	"card.collapseRow": "Collapse this row",
+	"level.off": "off（关闭）",
+	"level.minimal": "minimal（最低）",
+	"level.low": "low（低）",
+	"level.medium": "medium（中）",
+	"level.high": "high（高）",
+	"level.xhigh": "xhigh（很高）",
+	"level.max": "max（最高）"
+};
+//#endregion
+//#endregion
+
+//#region src/client/presets.js
+//#region presets
+/**
+ * The seven levels `@deepseek-ai/dsh-llm-pi-ai` accepts as `reasoningEfforts`
+ * keys, in ascending order. `reasoningEfforts` maps each supported level to the
+ * spelling this route must actually send, so the object declares a capability —
+ * it is not one selected level.
+ */
+const LEVEL_ORDER = [
+	"off",
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+	"max"
+];
+/** The level set the thinking switch installs, and the one bulk mode applies. */
+const DEFAULT_LEVELS = [
+	"off",
+	"low",
+	"medium",
+	"high"
+];
+/**
+ * The wire spelling used for one level. `off` is the only level allowed to map
+ * to null: it means "send no reasoning parameter".
+ * @param level - one level key.
+ * @returns the value the adapter sends for that level.
+ */
+function wireOf(level) {
+	return level === "off" ? null : level;
+}
+/**
+ * Build one capability object from a set of levels.
+ * @param levels - level keys to declare.
+ * @returns the `reasoningEfforts` value.
+ */
+function effortsOf(levels) {
+	const value = {};
+	for (const level of levels) value[level] = wireOf(level);
+	return value;
+}
+/**
+ * Read a model's declared capability object.
+ * @param model - one catalog row.
+ * @returns the stored object, or undefined when the row declares nothing.
+ */
+function levelsOf(model) {
+	const value = model === null || typeof model !== "object" ? void 0 : model.reasoningEfforts;
+	return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
+}
+/**
+ * Whether a row already declares at least one level.
+ * @param model - one catalog row.
+ * @returns true when the row carries a usable level declaration.
+ */
+function hasLevels(model) {
+	const value = levelsOf(model);
+	return value !== void 0 && Object.keys(value).length > 0;
+}
+/**
+ * Whether a row opts out of reasoning explicitly.
+ * @param model - one catalog row.
+ * @returns true for the exact `false` declaration.
+ */
+function deniesReasoning(model) {
+	return (model === null || typeof model !== "object" ? void 0 : model.reasoningEfforts) === false;
+}
+//#endregion
+//#endregion
+
+//#region src/client/editor.js
 //#region editor
 /** The official keyed seat this plugin fills: one area inside each provider card. */
 const PROVIDER_CARD_SLOT = "settings.models.provider-card";
@@ -1421,3 +1644,81 @@ function EffortEditor(props) {
 	] : null);
 }
 //#endregion
+//#endregion
+
+//#region src/client/index.js
+//#region plugin
+/**
+ * Client services this plugin needs. `remote.settings` is the generated
+ * `ctx.remote.settings` sub-service installed by
+ * `@deepseek-ai/dsh-api-settings-controller`; `locale` owns our dictionaries.
+ */
+const inject = [
+	"slots",
+	"remote",
+	"remote.settings",
+	"locale"
+];
+/**
+ * Client plugin body: register the dictionaries, then fill the provider-card
+ * seat. The seat belongs to the settings-models page, so `slots.inject` waits
+ * for that page's declaration instead of assuming load order.
+ *
+ * The two optional faces (`remote.llm`, `remote.session`) are filled by their
+ * own `ctx.inject` waits and handed to the editor through getters. They must be
+ * *declared* before they are read: Cordis refuses an undeclared service access,
+ * so poking `scope.remote.llm` from the seat's own scope would silently yield
+ * nothing — which is exactly how the first fetch-models build failed.
+ * @param ctx - client root context.
+ */
+function apply(ctx) {
+	ctx.effect(() => ctx.locale.register(NS, {
+		zh,
+		en
+	}), "dsh-reasoning-effort: dictionaries");
+	const t = ctx.locale.bind(NS);
+	/** Live optional faces; the editor reads them at click time. */
+	const faces = {};
+	const readThrough = (scope, name) => () => {
+		try {
+			return scope.remote[name];
+		} catch {
+			return void 0;
+		}
+	};
+	ctx.inject(["remote.llm"], (scope) => {
+		faces.llm = readThrough(scope, "llm");
+	});
+	ctx.inject(["remote.session"], (scope) => {
+		faces.session = readThrough(scope, "session");
+	});
+	ctx.inject(["slots", "remote.settings"], (scope) => {
+		const Cell = (props) => h(EffortEditor, {
+			...props,
+			settings: scope.remote.settings,
+			getLlm: () => faces.llm?.(),
+			getSession: () => faces.session?.(),
+			t
+		});
+		scope.slots.inject(PROVIDER_CARD_SLOT, () => scope.slots.register({
+			name: PROVIDER_CARD_SLOT,
+			key: PI_AI_SETTINGS_NS
+		}, Cell));
+	});
+}
+//#endregion
+exports.apply = apply;
+exports.inject = inject;
+exports.NS = NS;
+exports.EffortEditor = EffortEditor;
+exports.PROVIDER_CARD_SLOT = PROVIDER_CARD_SLOT;
+exports.PI_AI_SETTINGS_NS = PI_AI_SETTINGS_NS;
+// Exported for the offline self-test only; not part of the public surface.
+exports.buildPresets = buildPresets;
+exports.presetFor = presetFor;
+exports.levelsFromCatalog = levelsFromCatalog;
+exports.parseCapacity = parseCapacity;
+exports.formatCapacity = formatCapacity;
+//#endregion
+
+return module.exports;}});

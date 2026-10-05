@@ -1,8 +1,61 @@
 # dsh-reasoning-effort
 
-给 **官方「设置 → 模型」** 页面里每一张 pi-ai 提供商卡片，换上一套带**逐模型「思考模式」开关 + 档位勾选**的模型目录编辑器，并加上**批量开启思考模式**。
+**直接改官方那一份**：把官方 `@deepseek-ai/dsh-client-ui-settings-models` 的客户端整份拿过来（`vendor/official-client.cjs`），只加「思考模式」相关的控件，再作为**替换页**插入 —— 页面 id、侧边栏位置、顺序、文案全部与官方一致，只有多出来的那几个控件不同。
 
 > 非官方插件。修改的是 DSH Web GUI 的界面，需要与你的 DSH 版本兼容。
+
+## 为什么是 fork，而不是在旁边加一块
+
+官方只为外部插件留了两个座位（`settings.models.provider-card` / `settings.models.footer`），**没有**逐模型行的座位 —— 也就是说没法把控件插进官方那一行里。而官方那一行本来就长这样：
+
+```
+id 输入 · 显示名输入 · › 折叠箭头 · 🗑 垃圾桶
+└ 展开区：上下文窗口 · 最大输出 token · 输入类型
+```
+
+所以"在旁边再加一块"永远只能得到一张**和官方不一样的**表。要让界面就是官方那套、只多几个控件，只能 fork 整页。
+
+**代价（必须清楚）**：`cordis.patch.yml` 会 `disabled: true` 掉官方 `ui-settings-models`。**如果这份 fork 出问题，「设置 → 模型」整页会消失**。回滚办法是删掉 patch 里那两行 —— 官方页原样回来，插件不需要卸载。
+
+> 仓库里的 `src/` + `scripts/build.mjs` + `scripts/selftest.mjs` 是**早期的叠加式实现**（不替换官方页，只在卡片里另加一块），保留作为退路，用 `npm run build:additive` 构建。两者**不能同时启用** —— fork 自己就声明了 `settings.models.provider-card` 座位。
+
+## 改了什么
+
+`scripts/build-fork.mjs` 对官方那份做 6 处精确修改，**每一处都断言只命中一次** —— 换核后补丁对不上会直接失败，不会产出被悄悄改坏的文件：
+
+| # | 位置 | 改动 |
+|---|---|---|
+| 1 | 模块 id | 改成 `dsh-reasoning-effort`（其余原样） |
+| 2 | `ModelRow` 之前 | 插入 `ModelThinking` 组件 |
+| 3 | `ModelRow` 展开区 | 在官方「输入类型」之后渲染它 |
+| 4 | pi-ai 那一侧的 `ModelRow` 调用点 | 传入 `thinking` 座位（DeepSeek 目录那边不传，因此不受影响） |
+| 5–6 | en / zh 字典 | 加 `thinkingMode`、`thinkingLevels`、`level.*` |
+
+**思考模式**：一个总开关 + 七个档位勾选框（`off（关闭）` / `minimal（最低）` / `low（低）` / `medium（中）` / `high（高）` / `xhigh（很高）` / `max（最高）`，中英并列）。
+
+- 开关打开 → 写入默认档位集 `{off:null, low, medium, high}`
+- 开关关闭 → **删掉** `reasoningEfforts` 这个键（恢复适配器继承）
+- 逐个勾选 → 只增删被点的那一个键，其它键（含未知键）原样保留
+
+写入走的是**官方自己那套管线**（行内 `onChange` → 页面的路径操作 → `settings.mutate`），因此冲突处理、重读、revision 全部继承官方行为，没有另起一套。
+
+**没有改的部分**：官方的卡片、凭据、协议、容量、输入类型、`恢复默认模型`、`获取可用模型`、onboarding、欢迎声明 —— 全部原样。
+
+## 怎么装
+
+本包位于仓库 [`JuYueYe/dsh-personal-model-picker`](https://github.com/JuYueYe/dsh-personal-model-picker) 的 `packages/dsh-reasoning-effort` 子目录。**不能用 `github:` 规格安装**——那个规格装的是仓库根目录的「双栏模型选择器」。先克隆仓库，再按绝对路径安装子目录：
+
+```
+git clone https://github.com/JuYueYe/dsh-personal-model-picker
+```
+
+然后在 **Plugins 页 → 安装** 里填 `<克隆目录>/packages/dsh-reasoning-effort`；或先 `npm pack` 打成 tgz 再填 tgz 路径。
+
+装完**刷新页面**（Ctrl+R）；座位没出现就退出 DSH 重开。
+
+### 回滚
+
+删掉本包 `cordis.patch.yml` 里的两行（`disabled: true` 与 `insert`），重启宿主。官方页原样回来。
 
 ## 它解决什么
 

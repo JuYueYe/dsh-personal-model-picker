@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-reasoning-effort",
+	id: "@deepseek-ai/dsh-client-ui-settings-models",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -200,76 +200,6 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		/** Levels the pi-ai adapter accepts as `reasoningEfforts` keys, ascending. */
-		const REASONING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
-		/** The level set the thinking switch installs. */
-		const REASONING_DEFAULT_LEVELS = ["off", "low", "medium", "high"];
-		/** The wire value one level sends; only `off` may map to null. */
-		function reasoningWire(level) {
-			return level === "off" ? null : level;
-		}
-		/** Build a capability object from a level set. */
-		function reasoningEffortsOf(levels) {
-			const value = {};
-			for (const level of levels) value[level] = reasoningWire(level);
-			return value;
-		}
-		/** The declared capability object, or undefined when the row declares none. */
-		function reasoningLevels(model) {
-			const value = model.reasoningEfforts;
-			return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
-		}
-		/**
-		* Declare a pi-ai model's reasoning capability: one switch for the whole
-		* declaration, then one box per level it offers. The write rides the row's own
-		* `onChange`, so it inherits the page's path-op plumbing and conflict handling.
-		* @param props - the row plus the row-replacement action.
-		* @returns the thinking control.
-		*/
-		function ModelThinking({ model, position, disabled, t, onChange }) {
-			const levels = reasoningLevels(model);
-			const on = levels !== void 0 && Object.keys(levels).length > 0;
-			const write = (next) => {
-				const copy = {
-					...model
-				};
-				if (next === void 0) Reflect.deleteProperty(copy, "reasoningEfforts");
-				else copy.reasoningEfforts = next;
-				onChange(copy);
-			};
-			return (0, react_jsx_runtime.jsxs)("div", {
-				className: ModelsSection_module_css_default["modelField"],
-				children: [(0, react_jsx_runtime.jsxs)("label", {
-					className: ModelsSection_module_css_default["modelFieldLabel"],
-					children: [(0, react_jsx_runtime.jsx)("input", {
-						type: "checkbox",
-						checked: on,
-						disabled,
-						"aria-label": `${t("thinkingMode")} ${String(position)}`,
-						onChange: (event) => {
-							write(event.target.checked ? reasoningEffortsOf(REASONING_DEFAULT_LEVELS) : void 0);
-						}
-					}), t("thinkingMode")]
-				}), on ? (0, react_jsx_runtime.jsx)("div", {
-					className: ModelsSection_module_css_default["modelInputChoices"],
-					role: "group",
-					"aria-label": `${t("thinkingLevels")} ${String(position)}`,
-					children: REASONING_LEVELS.map((level) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Checkbox, {
-						label: t(`level.${level}`),
-						checked: level in levels,
-						disabled,
-						onChange: (checked) => {
-							const next = {
-								...levels
-							};
-							if (checked) next[level] = reasoningWire(level);
-							else delete next[level];
-							write(Object.keys(next).length === 0 ? void 0 : next);
-						}
-					}, level))
-				}) : null]
-			});
-		}
 		//#region lib/types/client/ModelRow.js
 		/**
 		* Render consistent model identity, capacity, and input-type controls.
@@ -341,12 +271,6 @@ window.__ModuleLoader__.load({
 						position,
 						fallback: props.inputFallback,
 						disabled: disabled || props.inputLoading === true,
-						t,
-						onChange: props.onChange
-					}), props.thinking === void 0 ? null : (0, react_jsx_runtime.jsx)(ModelThinking, {
-						model,
-						position,
-						disabled,
 						t,
 						onChange: props.onChange
 					})]
@@ -869,7 +793,6 @@ window.__ModuleLoader__.load({
 							onChange: (next) => {
 								onChange(models.map((row, at) => at === index ? next : row));
 							},
-							thinking: {},
 							onToggle: () => {
 								toggleExpanded(index);
 							},
@@ -2978,15 +2901,6 @@ window.__ModuleLoader__.load({
 			modelInputTypes: "Input types",
 			modelInputText: "Text",
 			modelInputImage: "Image",
-			thinkingMode: "Thinking mode",
-			thinkingLevels: "Thinking levels",
-			"level.off": "off（关闭）",
-			"level.minimal": "minimal（最低）",
-			"level.low": "low（低）",
-			"level.medium": "medium（中）",
-			"level.high": "high（高）",
-			"level.xhigh": "xhigh（很高）",
-			"level.max": "max（最高）",
 			addModel: "Add model",
 			removeModel: "Delete model",
 			modelsEmpty: "No models will be shown in the selector. Unlisted IDs can still be sent directly.",
@@ -3103,15 +3017,6 @@ window.__ModuleLoader__.load({
 			modelInputTypes: "输入类型",
 			modelInputText: "文本",
 			modelInputImage: "图片",
-			thinkingMode: "思考模式",
-			thinkingLevels: "思考档位",
-			"level.off": "off（关闭）",
-			"level.minimal": "minimal（最低）",
-			"level.low": "low（低）",
-			"level.medium": "medium（中）",
-			"level.high": "high（高）",
-			"level.xhigh": "xhigh（很高）",
-			"level.max": "max（最高）",
 			addModel: "添加模型",
 			removeModel: "删除模型",
 			modelsEmpty: "模型选择器中将不显示任何模型；目录外 ID 仍可直接发送。",
