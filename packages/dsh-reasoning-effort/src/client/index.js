@@ -23,10 +23,22 @@ function apply(ctx) {
 	}), "dsh-reasoning-effort: dictionaries");
 	const t = ctx.locale.bind(NS);
 	ctx.inject(["slots", "remote.settings"], (scope) => {
-		const settings = scope.remote.settings;
+		// `remote.session` (the adapter's model catalog) and `remote.llm`
+		// (endpoint discovery) are mounted by the same api-remotes entry as
+		// `remote.settings`, but they are read defensively: the editor degrades to
+		// the settings document alone when either is missing.
+		const read = (name) => {
+			try {
+				return scope.remote[name];
+			} catch {
+				return void 0;
+			}
+		};
 		const Cell = (props) => h(EffortEditor, {
 			...props,
-			settings,
+			settings: scope.remote.settings,
+			session: read("session"),
+			llm: read("llm"),
 			t
 		});
 		scope.slots.inject(PROVIDER_CARD_SLOT, () => scope.slots.register({
@@ -42,3 +54,9 @@ exports.NS = NS;
 exports.EffortEditor = EffortEditor;
 exports.PROVIDER_CARD_SLOT = PROVIDER_CARD_SLOT;
 exports.PI_AI_SETTINGS_NS = PI_AI_SETTINGS_NS;
+// Exported for the offline self-test only; not part of the public surface.
+exports.buildPresets = buildPresets;
+exports.presetFor = presetFor;
+exports.levelsFromCatalog = levelsFromCatalog;
+exports.parseCapacity = parseCapacity;
+exports.formatCapacity = formatCapacity;

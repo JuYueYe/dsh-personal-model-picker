@@ -237,6 +237,20 @@ const settings = {
 	}
 };
 
+const sessionStub = {
+	modelCatalog: async () => ({
+		ok: true,
+		value: { groups: [] }
+	})
+};
+const llmStub = {
+	discoverModels: async () => ({
+		ok: true,
+		value: []
+	})
+};
+let presetDataset = {};
+
 // --- load the bundle -----------------------------------------------------------
 const source = readFileSync(join(root, "dist", "client.cjs"), "utf8");
 let definition;
@@ -286,7 +300,11 @@ const fakeCtx = {
 	}
 };
 fakeScope = {
-	remote: { settings },
+	remote: {
+		settings,
+		session: sessionStub,
+		llm: llmStub
+	},
 	slots: {
 		inject: (key, callback) => {
 			slotKey = key;
@@ -612,6 +630,188 @@ rerender(card);
 check("the page editor stays hidden while taken over", card.editor.style.display === "none", String(card.editor.style.display));
 unmount();
 check("unmount restores the page editor", card.editor.style.display === void 0, String(card.editor.style.display));
+
+console.log("capability table");
+presetDataset = {
+	"gpt-5.2": {
+		mode: "chat",
+		supports_vision: true,
+		supports_reasoning: true,
+		max_input_tokens: 400000,
+		max_output_tokens: 128000
+	},
+	"openai/gpt-image-1": {
+		mode: "image_generation",
+		supports_vision: true
+	},
+	"anthropic/claude-opus-5-5": {
+		mode: "chat",
+		supports_reasoning: true,
+		max_input_tokens: 200000,
+		max_output_tokens: 64000
+	},
+	"atria-dawn-preview": {
+		mode: "chat",
+		max_input_tokens: 100000,
+		max_output_tokens: 8000
+	},
+	"factless-model": {
+		mode: "chat"
+	}
+};
+const table = mod.buildPresets(presetDataset);
+check("non-chat rows are dropped", table["gpt-image-1"] === void 0);
+check("factless rows are dropped", table["factless-model"] === void 0);
+check("provider prefixes collapse to one bare key", equal(table["claude-opus-5-5"], [
+	0,
+	1,
+	200000,
+	64000
+]));
+check("capabilities are ordered vision, reasoning, in, out", equal(table["gpt-5.2"], [
+	1,
+	1,
+	400000,
+	128000
+]));
+check("exact lookup finds a row", equal(mod.presetFor(table, "gpt-5.2"), [
+	1,
+	1,
+	400000,
+	128000
+]));
+check("dated variants fall back to the family row", equal(mod.presetFor(table, "gpt-5.2-2026-01-01"), [
+	1,
+	1,
+	400000,
+	128000
+]));
+check("unknown ids resolve to undefined", mod.presetFor(table, "totally-unknown") === void 0);
+check("levels come from the adapter catalog", equal(mod.levelsFromCatalog({ reasoning: { efforts: [
+	{ id: "low" },
+	{ id: "off" },
+	{ id: "not-a-level" }
+] } }), {
+	low: "low",
+	off: null
+}));
+
+console.log("auto configure");
+globalThis.fetch = async () => ({
+	ok: true,
+	json: async () => presetDataset
+});
+llmStub.discoverModels = async () => ({
+	ok: true,
+	value: [{
+		id: "gpt-5.2",
+		contextWindow: 350000,
+		maxTokens: 64000,
+		inputModalities: ["text", "image"]
+	}]
+});
+sessionStub.modelCatalog = async () => ({
+	ok: true,
+	value: {
+		groups: [{
+			id: "a9527",
+			models: [{ id: "weird", reasoning: { efforts: [{ id: "low" }, { id: "high" }] } }]
+		}]
+	}
+});
+descriptor = {
+	ns: "llm-pi-ai",
+	revision: 42,
+	value: {
+		providers: {
+			a9527: {
+				baseURL: "https://example.invalid/v1",
+				api: "openai-completions",
+				models: MODELS
+			}
+		}
+	}
+};
+settings.describe = async () => ({
+	ok: true,
+	value: {
+		writable: true,
+		namespaces: [descriptor]
+	}
+});
+await mount();
+at = mark();
+byText(tree, dict.zh["card.autoConfigure"])[0].props.onClick();
+await tick();
+await tick();
+await tick();
+const auto = lastOps(at) ?? [];
+check("auto configure writes only known fields", auto.every((op) => op.op === "set"), JSON.stringify(auto));
+check("the endpoint beats the table for capacity", auto.some((op) => equal(op, {
+	op: "set",
+	path: [
+		"providers",
+		"a9527",
+		"models",
+		"0",
+		"contextWindow"
+	],
+	value: 350000
+})), JSON.stringify(auto.filter((op) => op.path[4] === "contextWindow")));
+check("the table supplies capacity the endpoint omits", auto.some((op) => equal(op, {
+	op: "set",
+	path: [
+		"providers",
+		"a9527",
+		"models",
+		"2",
+		"contextWindow"
+	],
+	value: 200000
+})), JSON.stringify(auto.filter((op) => op.path[4] === "contextWindow")));
+check("a row nothing knows about is left alone", auto.every((op) => !(op.path[3] === "1" && op.path[4] === "input")));
+check("the table's reasoning fact is not written over a refusal", auto.every((op) => !(op.path[3] === "3" && op.path[4] === "reasoningEfforts")));
+check("rows that already declare levels keep them", auto.every((op) => !(op.path[4] === "reasoningEfforts" && [
+	"0",
+	"2"
+].includes(op.path[3]))), JSON.stringify(auto.filter((op) => op.path[4] === "reasoningEfforts")));
+check("auto configure reports how many rows it touched", JSON.stringify(calls.mutate[at]?.ops).length > 0);
+
+console.log("adopt");
+llmStub.discoverModels = async () => ({
+	ok: true,
+	value: [
+		{ id: "gpt-5.2", name: "GPT 5.2" },
+		{
+			id: "brand-new",
+			name: "Brand New",
+			contextWindow: 128000,
+			inputModalities: ["text", "image"]
+		}
+	]
+});
+await mount();
+byText(tree, dict.zh["card.fetchModels"])[0].props.onClick();
+await tick();
+await tick();
+render();
+const candidateBoxes = boxes();
+check("the adopt dialog lists the endpoint models", candidateBoxes.length >= 2, String(candidateBoxes.length));
+check("already-present ids are not picked", candidateBoxes[0].props.checked === false, String(candidateBoxes[0].props.checked));
+check("new ids are picked by default", candidateBoxes[1].props.checked === true);
+at = mark();
+const adoptButton = byType(tree, "button").find((node) => typeof node.props.children === "string" && node.props.children.startsWith(dict.zh["card.fetchAdopt"].split("{")[0]));
+check("the adopt button exists", adoptButton !== void 0);
+adoptButton.props.onClick();
+await tick();
+const adopted = lastOps(at)?.[0]?.value;
+check("adopting appends the new model", equal(adopted?.at(-1), {
+	id: "brand-new",
+	name: "Brand New",
+	contextWindow: 128000,
+	input: ["text", "image"]
+}), JSON.stringify(adopted?.at(-1)));
+check("adopting keeps every existing row", adopted?.length === MODELS.length + 1, String(adopted?.length));
 
 console.log("edge states");
 settings.describe = async () => ({

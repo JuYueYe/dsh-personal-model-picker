@@ -42,6 +42,24 @@ const zh = {
 	"card.bulkNone": "所有模型都已声明思考档位。",
 	"card.bulkDone": "已为 {count} 个模型开启思考模式。",
 	"card.bulkCancel": "取消",
+	"card.fetchModels": "获取可用模型",
+	"card.fetchModelsHint": "询问端点它提供了哪些模型",
+	"card.fetching": "正在询问端点…",
+	"card.fetchHint": "以下是端点列出的模型。勾选要加入目录的模型；已存在的 ID 会跳过。",
+	"card.fetchSearch": "搜索模型",
+	"card.fetchSelectAll": "全选",
+	"card.fetchDeselectAll": "取消全选",
+	"card.fetchNoMatch": "没有匹配的模型。",
+	"card.fetchAdopt": "添加所选（{count}）",
+	"card.adopted": "已添加 {count} 个模型。",
+	"card.autoConfigure": "自动配置所有模型",
+	"card.autoConfigureHint": "为每个模型补齐上下文窗口、输出上限、图片与思考档位；已有值不动",
+	"card.fetchConfig": "获取配置",
+	"card.fetchConfigHint": "为这个模型补齐上限、图片与思考档位；已有值不动",
+	"card.configNone": "端点与模型能力表都没有可写入的配置；已有值保持不变。",
+	"card.configApplied": "已配置 {count} 个模型。",
+	"card.configFailed": "获取配置失败：{message}",
+	"card.discoverFailed": "无法读取模型列表：{message}",
 	"level.off": "off（关闭）",
 	"level.minimal": "minimal（最低）",
 	"level.low": "low（低）",
@@ -85,6 +103,24 @@ const en = {
 	"card.bulkNone": "Every model already declares thinking levels.",
 	"card.bulkDone": "Enabled thinking mode for {count} model(s).",
 	"card.bulkCancel": "Cancel",
+	"card.fetchModels": "Fetch available models",
+	"card.fetchModelsHint": "Ask the endpoint which models it advertises",
+	"card.fetching": "Asking the endpoint…",
+	"card.fetchHint": "These are the models the endpoint advertises. Tick the ones to add; existing IDs are skipped.",
+	"card.fetchSearch": "Search models",
+	"card.fetchSelectAll": "Select all",
+	"card.fetchDeselectAll": "Deselect all",
+	"card.fetchNoMatch": "No matching models.",
+	"card.fetchAdopt": "Add selected ({count})",
+	"card.adopted": "Added {count} model(s).",
+	"card.autoConfigure": "Configure all models",
+	"card.autoConfigureHint": "Fill in context window, output cap, image input and thinking levels for every model; existing values are kept",
+	"card.fetchConfig": "Fetch config",
+	"card.fetchConfigHint": "Fill in this model's caps, image input and thinking levels; existing values are kept",
+	"card.configNone": "Neither the endpoint nor the capability table had anything to write; existing values are unchanged.",
+	"card.configApplied": "Configured {count} model(s).",
+	"card.configFailed": "Fetching config failed: {message}",
+	"card.discoverFailed": "Could not read the model list: {message}",
 	"level.off": "off（关闭）",
 	"level.minimal": "minimal（最低）",
 	"level.low": "low（低）",
@@ -174,6 +210,15 @@ function deniesReasoning(model) {
 const PROVIDER_CARD_SLOT = "settings.models.provider-card";
 /** The settings namespace whose cards we take over. pi-ai is the adapter that reads `reasoningEfforts`. */
 const PI_AI_SETTINGS_NS = "llm-pi-ai";
+/**
+ * Upstream capability dataset: LiteLLM's model price/capacity table (MIT), the
+ * same source <https://models.litellm.ai/> renders. It is the only source here
+ * that can say a model reasons *before* the config declares it — the adapter's
+ * own catalog only echoes what is already configured.
+ */
+const PRESET_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json";
+const PRESET_CACHE_KEY = "dsh-reasoning-effort/model-presets/v1";
+const PRESET_TTL_MS = 1440 * 60 * 1000;
 const h = react.createElement;
 const M = 1048576;
 const K = 1024;
@@ -204,6 +249,18 @@ const S = {
 		fontSize: 11,
 		color: "var(--dsw-alias-label-secondary)"
 	},
+	grow: {
+		flex: "1 1 auto"
+	},
+	link: {
+		fontSize: 12,
+		padding: "2px 4px",
+		border: "none",
+		background: "transparent",
+		color: "var(--dsw-alias-label-secondary)",
+		cursor: "pointer",
+		textDecoration: "none"
+	},
 	button: {
 		fontSize: 12,
 		padding: "4px 10px",
@@ -213,14 +270,18 @@ const S = {
 		color: "var(--dsw-alias-label-primary)",
 		cursor: "pointer"
 	},
-	danger: {
+	icon: {
 		fontSize: 12,
-		padding: "4px 10px",
-		borderRadius: 8,
+		padding: "2px 6px",
 		border: "none",
 		background: "transparent",
-		color: "var(--dsw-alias-state-error-primary)",
+		color: "var(--dsw-alias-label-secondary)",
 		cursor: "pointer"
+	},
+	divider: {
+		height: 1,
+		background: "var(--dsw-alias-border-l1)",
+		margin: "4px 0"
 	},
 	panel: {
 		padding: 12,
@@ -240,7 +301,7 @@ const S = {
 	},
 	rowTop: {
 		display: "grid",
-		gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) auto auto",
+		gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr) auto",
 		gap: 8,
 		alignItems: "center"
 	},
@@ -283,13 +344,21 @@ const S = {
 	levels: {
 		display: "flex",
 		flexWrap: "wrap",
-		gap: 12,
-		paddingTop: 2
+		gap: 8
 	},
 	level: {
 		display: "flex",
 		alignItems: "center",
-		gap: 5,
+		gap: 4,
+		fontSize: 11,
+		whiteSpace: "nowrap",
+		color: "var(--dsw-alias-label-primary)"
+	},
+	candidate: {
+		display: "flex",
+		alignItems: "center",
+		gap: 8,
+		padding: 4,
 		fontSize: 12,
 		color: "var(--dsw-alias-label-primary)"
 	},
@@ -347,6 +416,102 @@ function inputsOf(model) {
 	const value = model === null || typeof model !== "object" ? void 0 : model.input;
 	return Array.isArray(value) ? value : void 0;
 }
+/** A positive integer from the preset table, or 0 when it carries no fact. */
+function positiveInteger(value) {
+	return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+}
+/**
+ * Compress the upstream dataset into `model id -> [vision, reasoning, maxIn, maxOut]`.
+ *
+ * Only `mode === "chat"` rows carrying at least one fact survive; duplicates
+ * across provider prefixes keep the largest capacity. 0 means "no fact".
+ * @param payload - the parsed upstream dataset.
+ * @returns the preset table.
+ */
+function buildPresets(payload) {
+	const merged = new Map();
+	if (payload === null || typeof payload !== "object") return {};
+	for (const [key, value] of Object.entries(payload)) {
+		if (value === null || typeof value !== "object") continue;
+		if (value.mode !== "chat") continue;
+		const facts = [
+			value.supports_vision === true ? 1 : 0,
+			value.supports_reasoning === true ? 1 : 0,
+			positiveInteger(value.max_input_tokens),
+			positiveInteger(value.max_output_tokens)
+		];
+		if (facts.every((fact) => fact === 0)) continue;
+		const normalized = key.trim().toLowerCase();
+		const slash = normalized.lastIndexOf("/");
+		const bare = slash < 0 ? normalized : normalized.slice(slash + 1);
+		const current = merged.get(bare);
+		merged.set(bare, current === void 0 ? facts : [
+			current[0] || facts[0],
+			current[1] || facts[1],
+			Math.max(current[2], facts[2]),
+			Math.max(current[3], facts[3])
+		]);
+	}
+	return Object.fromEntries(merged);
+}
+/**
+ * Look one model id up, falling back to progressively shorter dash-segments so
+ * a dated release (`gpt-4o-2024-08-06`) still finds its family row.
+ * @param table - the preset table.
+ * @param id - the model id.
+ * @returns the facts, or undefined.
+ */
+function presetFor(table, id) {
+	let key = String(id).trim().toLowerCase();
+	for (;;) {
+		if (key in table) return table[key];
+		const dash = key.lastIndexOf("-");
+		if (dash <= 0) return void 0;
+		key = key.slice(0, dash);
+	}
+}
+/**
+ * Load the preset table, reusing a day-old browser cache when the network fails.
+ * @returns the table, or undefined when unavailable.
+ */
+async function loadPresets() {
+	let cached;
+	try {
+		cached = typeof localStorage === "undefined" ? void 0 : JSON.parse(localStorage.getItem(PRESET_CACHE_KEY) ?? "null");
+	} catch {
+		cached = void 0;
+	}
+	if (cached !== null && typeof cached === "object" && typeof cached.at === "number" && Date.now() - cached.at < PRESET_TTL_MS && cached.table !== void 0) return cached.table;
+	if (typeof fetch !== "function") return cached?.table;
+	try {
+		const response = await fetch(PRESET_URL, { cache: "no-store" });
+		if (!response.ok) return cached?.table;
+		const table = buildPresets(await response.json());
+		try {
+			localStorage?.setItem(PRESET_CACHE_KEY, JSON.stringify({
+				at: Date.now(),
+				table
+			}));
+		} catch {
+			/* a full or blocked store is not fatal */
+		}
+		return table;
+	} catch {
+		return cached?.table;
+	}
+}
+/** The levels a catalog model reports, mapped onto our level ids. */
+function levelsFromCatalog(model) {
+	const efforts = model?.reasoning?.efforts;
+	if (!Array.isArray(efforts)) return void 0;
+	const next = {};
+	for (const effort of efforts) {
+		const id = effort?.id;
+		if (typeof id !== "string" || !LEVEL_ORDER.includes(id)) continue;
+		next[id] = wireOf(id);
+	}
+	return Object.keys(next).length === 0 ? void 0 : next;
+}
 /** A switch modelled on the settings page's own toggles. */
 function Switch(props) {
 	return h("button", {
@@ -387,30 +552,30 @@ function Switch(props) {
  * The seat hands us the card's directory row, so `settingsNs` and
  * `settingsPath` are the settings address to read and write. Every edit is a
  * path-addressed single-field op, so unrelated fields survive untouched. Once
- * the catalog is readable, the effect below hides the official editor that the
- * page renders *after* this seat inside the same card, which is what makes this
- * block the card's editor rather than a second one beside it.
- * @param props - the seat's owner props plus the bound remote and translator.
+ * the catalog is readable, the effect below takes over the card: the page's own
+ * editor is mounted after this seat exactly while the card is open, so it is
+ * both the open/closed signal and the thing to hide.
+ * @param props - the seat's owner props plus the bound services and translator.
  * @returns the editor area.
  */
 function EffortEditor(props) {
 	const provider = props.provider !== null && typeof props.provider === "object" ? props.provider : {};
 	const settings = props.settings;
+	const session = props.session;
+	const llm = props.llm;
 	const t = props.t;
 	const ns = typeof provider.settingsNs === "string" ? provider.settingsNs : "";
+	const route = typeof provider.provider === "string" ? provider.provider : "";
 	const base = Array.isArray(provider.settingsPath) ? provider.settingsPath.map(String) : [];
 	const baseKey = base.join("/");
 	const alive = react.useRef(true);
 	const rootRef = react.useRef(null);
-	/**
-	 * Whether the page's own editor is currently mounted after this seat, i.e.
-	 * whether the user has the card open. Defaults to true so a seat that cannot
-	 * find its card (no DOM, unexpected markup) still renders instead of vanishing.
-	 */
+	/** Whether the page's own editor is mounted after this seat (the card is open). */
 	const [hostOpen, setHostOpen] = react.useState(true);
 	const [state, setState] = react.useState({
 		status: "loading",
 		models: [],
+		config: {},
 		revision: void 0,
 		writable: true,
 		error: void 0,
@@ -419,7 +584,10 @@ function EffortEditor(props) {
 		bulkOpen: false,
 		picked: [],
 		drafts: {},
-		newId: ""
+		newId: "",
+		candidates: void 0,
+		candidateQuery: "",
+		candidatePicked: []
 	});
 	const patch = (next) => setState((current) => ({
 		...current,
@@ -475,11 +643,14 @@ function EffortEditor(props) {
 				...current,
 				status: "ready",
 				models: Array.isArray(list) ? list : [],
+				config: readPath(descriptor.value, base) ?? {},
 				revision: descriptor.revision,
 				writable: Array.isArray(payload) ? true : payload.writable !== false,
 				error: void 0,
 				message: void 0,
 				picked: [],
+				candidatePicked: [],
+				candidates: void 0,
 				drafts: {}
 			}));
 		} catch (cause) {
@@ -503,7 +674,7 @@ function EffortEditor(props) {
 	 * Send one batch of path ops, then reread so the revision and the shown
 	 * values match what the Host actually stored.
 	 * @param ops - ordered settings path operations.
-	 * @param done - optional message key shown after a successful write.
+	 * @param done - optional message shown after a successful write.
 	 * @param clearDraft - optional draft key removed once the write settles.
 	 */
 	const send = async (ops, done, clearDraft) => {
@@ -563,15 +734,15 @@ function EffortEditor(props) {
 			value
 		};
 	};
-	/** Replace the whole catalog (add / delete), preserving every other field. */
-	const setCatalog = (rows) => send([{
+	/** Replace the whole catalog (add / delete / adopt), preserving other fields. */
+	const setCatalog = (rows, done) => send([{
 		op: "set",
 		path: [
 			...base,
 			"models"
 		],
 		value: rows
-	}]);
+	}], done);
 	const draftKey = (index, field) => `${String(index)}:${field}`;
 	const draftOf = (index, field, fallback) => {
 		const key = draftKey(index, field);
@@ -584,21 +755,22 @@ function EffortEditor(props) {
 			[draftKey(index, field)]: text
 		}
 	}));
+	const dropDraft = (key) => setState((current) => {
+		const drafts = {
+			...current.drafts
+		};
+		delete drafts[key];
+		return {
+			...current,
+			drafts
+		};
+	});
 	/** Commit a plain text field; an empty value clears it. */
 	const commitText = (index, field, text, required) => {
 		const trimmed = String(text).trim();
 		const key = draftKey(index, field);
 		if (required === true && trimmed === "") {
-			setState((current) => {
-				const drafts = {
-					...current.drafts
-				};
-				delete drafts[key];
-				return {
-					...current,
-					drafts
-				};
-			});
+			dropDraft(key);
 			return;
 		}
 		send([opFor(index, field, trimmed === "" ? void 0 : trimmed)], void 0, key);
@@ -645,6 +817,199 @@ function EffortEditor(props) {
 		else next[level] = wireOf(level);
 		send([opFor(index, "reasoningEfforts", Object.keys(next).length === 0 ? void 0 : next)]);
 	};
+	/** Ask the Host to interrogate the provider endpoint for its model list. */
+	const discover = async () => {
+		if (llm === void 0) return void 0;
+		const response = await llm.discoverModels(ns, {
+			provider: route,
+			...typeof state.config.baseURL === "string" && state.config.baseURL !== "" ? { baseURL: state.config.baseURL } : {},
+			...typeof state.config.api === "string" && state.config.api !== "" ? { api: state.config.api } : {}
+		});
+		if (!response.ok) {
+			patch({ error: t("card.discoverFailed", { message: response.error.message }) });
+			return void 0;
+		}
+		return response.value;
+	};
+	/** The catalog the adapter already keeps for this provider, indexed by model id. */
+	const catalogFor = async () => {
+		if (session === void 0) return new Map();
+		try {
+			const response = await session.modelCatalog();
+			if (!response.ok) return new Map();
+			const group = (response.value?.groups ?? []).find((candidate) => candidate.id === route);
+			return new Map((group?.models ?? []).map((model) => [model.id, model]));
+		} catch {
+			return new Map();
+		}
+	};
+	/**
+	 * Build the writes that fill one row from the catalog, the endpoint, and the
+	 * capability table. Existing values always win.
+	 * @param index - row position.
+	 * @param row - the row itself.
+	 * @param catalog - adapter catalog, by id.
+	 * @param endpoint - discovered endpoint models, by id.
+	 * @param presets - capability table.
+	 * @returns the ops for this row, and the fields it filled.
+	 */
+	const opsFromSources = (index, row, catalog, endpoint, presets) => {
+		const id = textOf(row, "id");
+		const found = endpoint.get(id);
+		const known = catalog.get(id);
+		const facts = presets === void 0 ? void 0 : presetFor(presets, id);
+		const ops = [];
+		const filled = [];
+		const window = positiveInteger(found?.contextWindow) || positiveInteger(facts?.[2]);
+		if (row.contextWindow === void 0 && window > 0) {
+			ops.push(opFor(index, "contextWindow", window));
+			filled.push("contextWindow");
+		}
+		const max = positiveInteger(found?.maxTokens) || positiveInteger(facts?.[3]);
+		if (row.maxTokens === void 0 && max > 0) {
+			ops.push(opFor(index, "maxTokens", max));
+			filled.push("maxTokens");
+		}
+		const modalities = Array.isArray(found?.inputModalities) ? found.inputModalities : void 0;
+		const vision = modalities !== void 0 ? modalities.includes("image") : facts?.[0] === 1;
+		// Only write the input list when some source actually knows something;
+		// otherwise a row we know nothing about would silently lose image input.
+		if (row.input === void 0 && (modalities !== void 0 || facts !== void 0)) {
+			ops.push(opFor(index, "input", vision ? [
+				"text",
+				"image"
+			] : ["text"]));
+			filled.push("input");
+		}
+		if (!hasLevels(row) && deniesReasoning(row) !== true) {
+			const levels = levelsFromCatalog(known) ?? (facts?.[1] === 1 ? effortsOf(DEFAULT_LEVELS) : void 0);
+			if (levels !== void 0) {
+				ops.push(opFor(index, "reasoningEfforts", levels));
+				filled.push("reasoningEfforts");
+			}
+		}
+		return {
+			ops,
+			filled
+		};
+	};
+	/** Fill every row that has something to learn from the three sources. */
+	const configureAll = async () => {
+		patch({
+			busy: true,
+			error: void 0
+		});
+		try {
+			const [endpointList, catalog, presets] = await Promise.all([
+				discover(),
+				catalogFor(),
+				loadPresets()
+			]);
+			const endpoint = new Map((endpointList ?? []).map((model) => [model.id, model]));
+			const ops = [];
+			let rows = 0;
+			for (const [index, row] of state.models.entries()) {
+				const result = opsFromSources(index, row, catalog, endpoint, presets);
+				if (result.ops.length > 0) rows += 1;
+				ops.push(...result.ops);
+			}
+			if (ops.length === 0) {
+				patch({
+					busy: false,
+					message: t("card.configNone")
+				});
+				return;
+			}
+			await send(ops, t("card.configApplied", { count: rows }));
+		} catch (cause) {
+			patch({
+				busy: false,
+				error: t("card.configFailed", { message: cause instanceof Error ? cause.message : String(cause) })
+			});
+		}
+	};
+	/** Fill one row from the same three sources. */
+	const configureOne = async (index) => {
+		const row = state.models[index] ?? {};
+		patch({
+			busy: true,
+			error: void 0
+		});
+		try {
+			const [endpointList, catalog, presets] = await Promise.all([
+				discover(),
+				catalogFor(),
+				loadPresets()
+			]);
+			const endpoint = new Map((endpointList ?? []).map((model) => [model.id, model]));
+			const result = opsFromSources(index, row, catalog, endpoint, presets);
+			if (result.ops.length === 0) {
+				patch({
+					busy: false,
+					message: t("card.configNone")
+				});
+				return;
+			}
+			await send(result.ops, t("card.configApplied", { count: 1 }));
+		} catch (cause) {
+			patch({
+				busy: false,
+				error: t("card.configFailed", { message: cause instanceof Error ? cause.message : String(cause) })
+			});
+		}
+	};
+	/** Open the adopt dialog with the endpoint's advertised models. */
+	const openCandidates = async () => {
+		patch({
+			busy: true,
+			error: void 0
+		});
+		try {
+			const list = await discover();
+			if (!alive.current) return;
+			if (list === void 0) {
+				patch({ busy: false });
+				return;
+			}
+			const known = new Set(state.models.map((row) => textOf(row, "id")));
+			patch({
+				busy: false,
+				candidates: list,
+				candidateQuery: "",
+				candidatePicked: list.filter((model) => !known.has(model.id)).map((model) => model.id)
+			});
+		} catch (cause) {
+			patch({
+				busy: false,
+				error: t("card.configFailed", { message: cause instanceof Error ? cause.message : String(cause) })
+			});
+		}
+	};
+	/** Append every picked candidate, keeping existing rows untouched. */
+	const adoptPicked = () => {
+		const chosen = state.candidates ?? [];
+		const existing = state.models.map((row) => row !== null && typeof row === "object" ? {
+			...row
+		} : {});
+		const known = new Set(existing.map((row) => row.id));
+		for (const candidate of chosen) {
+			if (!state.candidatePicked.includes(candidate.id) || known.has(candidate.id)) continue;
+			known.add(candidate.id);
+			existing.push({
+				id: candidate.id,
+				...typeof candidate.name === "string" && candidate.name !== "" ? { name: candidate.name } : {},
+				...positiveInteger(candidate.contextWindow) > 0 ? { contextWindow: candidate.contextWindow } : {},
+				...positiveInteger(candidate.maxTokens) > 0 ? { maxTokens: candidate.maxTokens } : {},
+				...Array.isArray(candidate.inputModalities) ? { input: [...candidate.inputModalities] } : {}
+			});
+		}
+		patch({
+			candidates: void 0,
+			candidatePicked: [],
+			candidateQuery: ""
+		});
+		setCatalog(existing, t("card.adopted", { count: existing.length - state.models.length }));
+	};
 	const rows = state.models;
 	const bulkEligible = rows.map((model, index) => hasLevels(model) ? -1 : index).filter((index) => index >= 0);
 	/** Enable the default level set on every picked row in one write. */
@@ -655,10 +1020,6 @@ function EffortEditor(props) {
 			picked: []
 		}));
 	};
-	// Take the card over: the page mounts its own editor AFTER this seat exactly
-	// while the card is open, so that sibling is both the open/closed signal and
-	// the thing to hide. Watching the card keeps the two in step as the user
-	// presses Edit.
 	const takeover = state.status === "ready" && rows.length > 0;
 	react.useEffect(() => {
 		const node = rootRef.current;
@@ -704,20 +1065,44 @@ function EffortEditor(props) {
 			color: "var(--dsw-alias-state-error-primary)"
 		}
 	}, state.error));
-	const header = h("div", { style: S.head }, [
+	const bulkLine = h("div", null, h("button", {
+		type: "button",
+		style: {
+			...S.link,
+			color: "var(--dsw-alias-label-primary)"
+		},
+		disabled,
+		onClick: () => patch({
+			bulkOpen: !state.bulkOpen,
+			picked: [],
+			message: void 0
+		})
+	}, t("card.bulk")));
+	const catalogHead = h("div", {
+		style: {
+			...S.head,
+			marginTop: 2
+		}
+	}, [
 		h("span", { key: "t", style: S.title }, t("card.title")),
 		h("span", { key: "m", style: S.meta }, rows.length === 0 ? t("card.inherited") : t("card.customized")),
+		h("span", { key: "g", style: S.grow }),
 		h("button", {
-			key: "bulk",
+			key: "fetch",
 			type: "button",
-			style: S.button,
+			style: S.link,
+			disabled: state.busy,
+			title: t("card.fetchModelsHint"),
+			onClick: openCandidates
+		}, state.busy ? t("card.fetching") : t("card.fetchModels")),
+		h("button", {
+			key: "auto",
+			type: "button",
+			style: S.link,
 			disabled,
-			onClick: () => patch({
-				bulkOpen: !state.bulkOpen,
-				picked: [],
-				message: void 0
-			})
-		}, t("card.bulk"))
+			title: t("card.autoConfigureHint"),
+			onClick: configureAll
+		}, t("card.autoConfigure"))
 	]);
 	const bulkPanel = state.bulkOpen !== true ? null : h("div", { style: S.panel }, [
 		h("p", {
@@ -761,14 +1146,7 @@ function EffortEditor(props) {
 			const model = rows[index] ?? {};
 			return h("label", {
 				key: String(index),
-				style: {
-					display: "flex",
-					alignItems: "center",
-					gap: 8,
-					padding: 4,
-					fontSize: 12,
-					color: "var(--dsw-alias-label-primary)"
-				}
+				style: S.candidate
 			}, [
 				h("input", {
 					key: "c",
@@ -804,6 +1182,102 @@ function EffortEditor(props) {
 				onClick: () => patch({
 					bulkOpen: false,
 					picked: []
+				})
+			}, t("card.bulkCancel"))
+		])
+	]);
+	const query = state.candidateQuery.trim().toLowerCase();
+	const shown = state.candidates === void 0 ? [] : query === "" ? state.candidates : state.candidates.filter((model) => model.id.toLowerCase().includes(query) || String(model.name ?? "").toLowerCase().includes(query));
+	const candidatePanel = state.candidates === void 0 ? null : h("div", { style: S.panel }, [
+		h("p", {
+			key: "hint",
+			style: S.meta
+		}, t("card.fetchHint")),
+		h("input", {
+			key: "q",
+			style: {
+				...S.input,
+				margin: "8px 0"
+			},
+			type: "text",
+			placeholder: t("card.fetchSearch"),
+			"aria-label": t("card.fetchSearch"),
+			value: state.candidateQuery,
+			onChange: (event) => patch({ candidateQuery: event.target.value })
+		}),
+		h("div", {
+			key: "acts",
+			style: {
+				display: "flex",
+				gap: 8,
+				marginBottom: 8
+			}
+		}, [
+			h("button", {
+				key: "all",
+				type: "button",
+				style: S.button,
+				onClick: () => patch({ candidatePicked: shown.map((model) => model.id) })
+			}, t("card.fetchSelectAll")),
+			h("button", {
+				key: "none",
+				type: "button",
+				style: S.button,
+				onClick: () => patch({ candidatePicked: [] })
+			}, t("card.fetchDeselectAll"))
+		]),
+		shown.length === 0 ? h("p", {
+			key: "empty",
+			style: S.meta
+		}, t("card.fetchNoMatch")) : h("div", {
+			key: "list",
+			style: {
+				maxHeight: 260,
+				overflowY: "auto"
+			}
+		}, shown.map((model) => h("label", {
+			key: model.id,
+			style: S.candidate
+		}, [
+			h("input", {
+				key: "c",
+				type: "checkbox",
+				checked: state.candidatePicked.includes(model.id),
+				onChange: (event) => patch({
+					candidatePicked: event.target.checked ? [...state.candidatePicked, model.id] : state.candidatePicked.filter((id) => id !== model.id)
+				})
+			}),
+			h("span", {
+				key: "n",
+				style: {
+					...S.grow,
+					fontSize: 12
+				}
+			}, model.name === void 0 || model.name === model.id ? model.id : `${model.id} · ${model.name}`)
+		]))),
+		h("div", {
+			key: "go",
+			style: {
+				display: "flex",
+				gap: 8,
+				marginTop: 8
+			}
+		}, [
+			h("button", {
+				key: "add",
+				type: "button",
+				style: S.button,
+				disabled: state.candidatePicked.length === 0,
+				onClick: adoptPicked
+			}, t("card.fetchAdopt", { count: state.candidatePicked.length })),
+			h("button", {
+				key: "cancel",
+				type: "button",
+				style: S.button,
+				onClick: () => patch({
+					candidates: void 0,
+					candidatePicked: [],
+					candidateQuery: ""
 				})
 			}, t("card.bulkCancel"))
 		])
@@ -846,15 +1320,32 @@ function EffortEditor(props) {
 					onChange: (event) => setDraft(index, "name", event.target.value),
 					onBlur: (event) => commitText(index, "name", event.target.value, false)
 				}),
-				h("button", {
-					key: "rm",
-					type: "button",
-					style: S.danger,
-					disabled,
-					"aria-label": t("card.removeModel"),
-					title: t("card.removeModel"),
-					onClick: () => setCatalog(rows.filter((_row, at) => at !== index))
-				}, "✕")
+				h("div", {
+					key: "acts",
+					style: {
+						display: "flex",
+						gap: 4,
+						alignItems: "center"
+					}
+				}, [
+					h("button", {
+						key: "cfg",
+						type: "button",
+						style: S.link,
+						disabled,
+						title: t("card.fetchConfigHint"),
+						onClick: () => configureOne(index)
+					}, t("card.fetchConfig")),
+					h("button", {
+						key: "rm",
+						type: "button",
+						style: S.icon,
+						disabled,
+						"aria-label": t("card.removeModel"),
+						title: t("card.removeModel"),
+						onClick: () => setCatalog(rows.filter((_row, at) => at !== index))
+					}, "✕")
+				])
 			]),
 			h("div", {
 				key: "mid",
@@ -874,7 +1365,8 @@ function EffortEditor(props) {
 						type: "text",
 						inputMode: "numeric",
 						"aria-label": t("card.contextWindow"),
-						placeholder: t("card.capacityPlaceholder"),
+						placeholder: "256K",
+						title: t("card.capacityPlaceholder"),
 						disabled,
 						value: draftOf(index, "contextWindow", formatCapacity(row.contextWindow)),
 						onChange: (event) => setDraft(index, "contextWindow", event.target.value),
@@ -895,7 +1387,8 @@ function EffortEditor(props) {
 						type: "text",
 						inputMode: "numeric",
 						"aria-label": t("card.maxTokens"),
-						placeholder: t("card.capacityPlaceholder"),
+						placeholder: "32K",
+						title: t("card.capacityPlaceholder"),
 						disabled,
 						value: draftOf(index, "maxTokens", formatCapacity(row.maxTokens)),
 						onChange: (event) => setDraft(index, "maxTokens", event.target.value),
@@ -996,9 +1489,12 @@ function EffortEditor(props) {
 		ref: rootRef,
 		style: open ? S.wrap : S.closed
 	}, open ? [
-		header,
-		...notices,
+		bulkLine,
+		notices.length === 0 ? null : h("div", { key: "n" }, notices),
 		bulkPanel,
+		h("div", { key: "d", style: S.divider }),
+		catalogHead,
+		candidatePanel,
 		body,
 		addRow
 	] : null);
@@ -1032,10 +1528,22 @@ function apply(ctx) {
 	}), "dsh-reasoning-effort: dictionaries");
 	const t = ctx.locale.bind(NS);
 	ctx.inject(["slots", "remote.settings"], (scope) => {
-		const settings = scope.remote.settings;
+		// `remote.session` (the adapter's model catalog) and `remote.llm`
+		// (endpoint discovery) are mounted by the same api-remotes entry as
+		// `remote.settings`, but they are read defensively: the editor degrades to
+		// the settings document alone when either is missing.
+		const read = (name) => {
+			try {
+				return scope.remote[name];
+			} catch {
+				return void 0;
+			}
+		};
 		const Cell = (props) => h(EffortEditor, {
 			...props,
-			settings,
+			settings: scope.remote.settings,
+			session: read("session"),
+			llm: read("llm"),
 			t
 		});
 		scope.slots.inject(PROVIDER_CARD_SLOT, () => scope.slots.register({
@@ -1051,6 +1559,12 @@ exports.NS = NS;
 exports.EffortEditor = EffortEditor;
 exports.PROVIDER_CARD_SLOT = PROVIDER_CARD_SLOT;
 exports.PI_AI_SETTINGS_NS = PI_AI_SETTINGS_NS;
+// Exported for the offline self-test only; not part of the public surface.
+exports.buildPresets = buildPresets;
+exports.presetFor = presetFor;
+exports.levelsFromCatalog = levelsFromCatalog;
+exports.parseCapacity = parseCapacity;
+exports.formatCapacity = formatCapacity;
 //#endregion
 
 return module.exports;}});
