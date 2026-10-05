@@ -214,6 +214,7 @@ const BULK = `\t\t/**
 \t\tfunction ModelBulk({ models, disabled, t, onChange }) {
 \t\t\tconst [open, setOpen] = (0, react.useState)(false);
 \t\t\tconst [picked, setPicked] = (0, react.useState)(() => []);
+\t\t\tconst [notice, setNotice] = (0, react.useState)("");
 \t\t\tconst eligible = models.map((model, index) => model !== null && typeof model === "object" && !(model.reasoningEfforts !== void 0 && model.reasoningEfforts !== false && Object.keys(model.reasoningEfforts).length > 0) ? index : -1).filter((index) => index >= 0);
 \t\t\tconst apply = () => {
 \t\t\t\tonChange(models.map((model, index) => picked.includes(index) ? {
@@ -232,9 +233,21 @@ const BULK = `\t\t/**
 \t\t\t});
 \t\t\treturn (0, react_jsx_runtime.jsxs)("div", {
 \t\t\t\tchildren: [link(t("bulkThinking"), () => {
+\t\t\t\t\tif (eligible.length === 0) {
+\t\t\t\t\t\tsetNotice(t("bulkNone"));
+\t\t\t\t\t\tsetOpen(false);
+\t\t\t\t\t\treturn;
+\t\t\t\t\t}
+\t\t\t\t\tsetNotice("");
 \t\t\t\t\tsetOpen(!open);
 \t\t\t\t\tsetPicked([]);
-\t\t\t\t}, eligible.length === 0), open ? (0, react_jsx_runtime.jsxs)("div", {
+\t\t\t\t}), notice === "" ? null : (0, react_jsx_runtime.jsx)("span", {
+\t\t\t\t\tstyle: {
+\t\t\t\t\t\tfontSize: 12,
+\t\t\t\t\t\tcolor: "var(--dsw-alias-label-secondary)"
+\t\t\t\t\t},
+\t\t\t\t\tchildren: notice
+\t\t\t\t}), open ? (0, react_jsx_runtime.jsxs)("div", {
 \t\t\t\t\tstyle: {
 \t\t\t\t\t\tpadding: 12,
 \t\t\t\t\t\tborder: "1px solid var(--dsw-alias-border-l1)",

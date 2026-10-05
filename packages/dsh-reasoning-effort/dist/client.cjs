@@ -392,6 +392,7 @@ window.__ModuleLoader__.load({
 		function ModelBulk({ models, disabled, t, onChange }) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [picked, setPicked] = (0, react.useState)(() => []);
+			const [notice, setNotice] = (0, react.useState)("");
 			const eligible = models.map((model, index) => model !== null && typeof model === "object" && !(model.reasoningEfforts !== void 0 && model.reasoningEfforts !== false && Object.keys(model.reasoningEfforts).length > 0) ? index : -1).filter((index) => index >= 0);
 			const apply = () => {
 				onChange(models.map((model, index) => picked.includes(index) ? {
@@ -410,9 +411,21 @@ window.__ModuleLoader__.load({
 			});
 			return (0, react_jsx_runtime.jsxs)("div", {
 				children: [link(t("bulkThinking"), () => {
+					if (eligible.length === 0) {
+						setNotice(t("bulkNone"));
+						setOpen(false);
+						return;
+					}
+					setNotice("");
 					setOpen(!open);
 					setPicked([]);
-				}, eligible.length === 0), open ? (0, react_jsx_runtime.jsxs)("div", {
+				}), notice === "" ? null : (0, react_jsx_runtime.jsx)("span", {
+					style: {
+						fontSize: 12,
+						color: "var(--dsw-alias-label-secondary)"
+					},
+					children: notice
+				}), open ? (0, react_jsx_runtime.jsxs)("div", {
 					style: {
 						padding: 12,
 						border: "1px solid var(--dsw-alias-border-l1)",
