@@ -370,6 +370,83 @@ patch("per-row button", `\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("button", {
 \t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["iconButton"],
 \t\t\t\t\t\t\t"aria-label": \`\${t("modelAdvanced")} \${String(position)}\`,`);
 
+// --- 3d. image input becomes one switch ----------------------------------------
+// The page ships a `switchThumb` class it never uses and no Switch primitive, so
+// the knob is drawn inline; that keeps the control independent of any class the
+// official stylesheet may rename.
+patch("image switch", `\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("legend", {
+\t\t\t\t\tclassName: ModelsSection_module_css_default["modelFieldLabel"],
+\t\t\t\t\tchildren: t("modelInputTypes")
+\t\t\t\t}), (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\tclassName: ModelsSection_module_css_default["modelInputChoices"],
+\t\t\t\t\tchildren: ["text", "image"].map((modality) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Checkbox, {
+\t\t\t\t\t\tlabel: t(modality === "text" ? "modelInputText" : "modelInputImage"),
+\t\t\t\t\t\tchecked: selected.includes(modality),
+\t\t\t\t\t\tdisabled: disabled || selected.length === 1 && selected.includes(modality),
+\t\t\t\t\t\tonChange: (checked) => {
+\t\t\t\t\t\t\tconst nextSelected = ["text", "image"].filter((value) => value === modality ? checked : selected.includes(value));
+\t\t\t\t\t\t\tconst next = {
+\t\t\t\t\t\t\t\t...model,
+\t\t\t\t\t\t\t\t[field]: nextSelected
+\t\t\t\t\t\t\t};
+\t\t\t\t\t\t\tif (field === "inputModalities" && !nextSelected.includes("image")) {
+\t\t\t\t\t\t\t\tReflect.deleteProperty(next, "imagePixelBudget");
+\t\t\t\t\t\t\t\tReflect.deleteProperty(next, "imageMaxBytes");
+\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\tonChange(next);
+\t\t\t\t\t\t}
+\t\t\t\t\t}, modality))
+\t\t\t\t})]`, `\t\t\t\tchildren: [(0, react_jsx_runtime.jsx)("legend", {
+\t\t\t\t\tclassName: ModelsSection_module_css_default["modelFieldLabel"],
+\t\t\t\t\tchildren: t("imageInput")
+\t\t\t\t}), (0, react_jsx_runtime.jsx)("div", {
+\t\t\t\t\tclassName: ModelsSection_module_css_default["modelInputChoices"],
+\t\t\t\t\tchildren: (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\trole: "switch",
+\t\t\t\t\t\t"aria-checked": selected.includes("image"),
+\t\t\t\t\t\t"aria-label": \`\${t("imageInput")} \${String(position)}\`,
+\t\t\t\t\t\ttitle: t("imageInput"),
+\t\t\t\t\t\tdisabled,
+\t\t\t\t\t\tonClick: () => {
+\t\t\t\t\t\t\tconst checked = !selected.includes("image");
+\t\t\t\t\t\t\tconst nextSelected = checked ? ["text", "image"] : ["text"];
+\t\t\t\t\t\t\tconst next = {
+\t\t\t\t\t\t\t\t...model,
+\t\t\t\t\t\t\t\t[field]: nextSelected
+\t\t\t\t\t\t\t};
+\t\t\t\t\t\t\tif (field === "inputModalities" && !checked) {
+\t\t\t\t\t\t\t\tReflect.deleteProperty(next, "imagePixelBudget");
+\t\t\t\t\t\t\t\tReflect.deleteProperty(next, "imageMaxBytes");
+\t\t\t\t\t\t\t}
+\t\t\t\t\t\t\tonChange(next);
+\t\t\t\t\t\t},
+\t\t\t\t\t\tstyle: {
+\t\t\t\t\t\t\twidth: 44,
+\t\t\t\t\t\t\theight: 24,
+\t\t\t\t\t\t\tflex: "0 0 auto",
+\t\t\t\t\t\t\tborderRadius: 12,
+\t\t\t\t\t\t\tborder: "none",
+\t\t\t\t\t\t\tpadding: 2,
+\t\t\t\t\t\t\tdisplay: "flex",
+\t\t\t\t\t\t\talignItems: "center",
+\t\t\t\t\t\t\tjustifyContent: selected.includes("image") ? "flex-end" : "flex-start",
+\t\t\t\t\t\t\tbackground: selected.includes("image") ? "var(--dsw-alias-brand-primary)" : "var(--dsw-alias-state-idle-primary)",
+\t\t\t\t\t\t\tcursor: disabled ? "default" : "pointer",
+\t\t\t\t\t\t\topacity: disabled ? 0.5 : 1
+\t\t\t\t\t\t},
+\t\t\t\t\t\tchildren: (0, react_jsx_runtime.jsx)("span", {
+\t\t\t\t\t\t\tstyle: {
+\t\t\t\t\t\t\t\twidth: 20,
+\t\t\t\t\t\t\t\theight: 20,
+\t\t\t\t\t\t\t\tborderRadius: "50%",
+\t\t\t\t\t\t\t\tbackground: "#fff",
+\t\t\t\t\t\t\t\tdisplay: "block"
+\t\t\t\t\t\t\t}
+\t\t\t\t\t\t})
+\t\t\t\t\t})
+\t\t\t\t})]`);
+
 // --- 4. feed it from the pi-ai editor (not the DeepSeek catalog) ---------------
 patch("pi-ai row wiring", `\t\t\t\t\t\t\tonChange: (next) => {
 \t\t\t\t\t\t\t\tonChange(models.map((row, at) => at === index ? next : row));
@@ -390,6 +467,7 @@ const EN_KEYS = `\t\t\tthinkingMode: "Thinking mode",
 \t\t\tbulkClear: "Clear selection",
 \t\t\tbulkApply: "Enable selected ({count})",
 \t\t\tbulkCancel: "Cancel",
+\t\t\timageInput: "Image input",
 \t\t\tautoConfigureModels: "Configure all models",
 \t\t\tautoConfigureHint: "Fill in context window, output cap, image input and thinking levels from the endpoint and the capability table for every model; existing values are kept",
 \t\t\tfetchModelConfig: "Fetch config",
@@ -411,6 +489,7 @@ const ZH_KEYS = `\t\t\tthinkingMode: "思考模式",
 \t\t\tbulkClear: "取消全选",
 \t\t\tbulkApply: "开启所选（{count}）",
 \t\t\tbulkCancel: "取消",
+\t\t\timageInput: "支持图片输入",
 \t\t\tautoConfigureModels: "自动配置所有模型",
 \t\t\tautoConfigureHint: "从端点与模型能力表为每个模型补齐上下文窗口、输出上限、图片与思考档位；已有值保持不动",
 \t\t\tfetchModelConfig: "获取配置",

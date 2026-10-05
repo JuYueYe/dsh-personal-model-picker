@@ -176,26 +176,53 @@ window.__ModuleLoader__.load({
 				"aria-label": `${t("modelInputTypes")} ${String(position)}`,
 				children: [(0, react_jsx_runtime.jsx)("legend", {
 					className: ModelsSection_module_css_default["modelFieldLabel"],
-					children: t("modelInputTypes")
+					children: t("imageInput")
 				}), (0, react_jsx_runtime.jsx)("div", {
 					className: ModelsSection_module_css_default["modelInputChoices"],
-					children: ["text", "image"].map((modality) => (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Checkbox, {
-						label: t(modality === "text" ? "modelInputText" : "modelInputImage"),
-						checked: selected.includes(modality),
-						disabled: disabled || selected.length === 1 && selected.includes(modality),
-						onChange: (checked) => {
-							const nextSelected = ["text", "image"].filter((value) => value === modality ? checked : selected.includes(value));
+					children: (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						role: "switch",
+						"aria-checked": selected.includes("image"),
+						"aria-label": `${t("imageInput")} ${String(position)}`,
+						title: t("imageInput"),
+						disabled,
+						onClick: () => {
+							const checked = !selected.includes("image");
+							const nextSelected = checked ? ["text", "image"] : ["text"];
 							const next = {
 								...model,
 								[field]: nextSelected
 							};
-							if (field === "inputModalities" && !nextSelected.includes("image")) {
+							if (field === "inputModalities" && !checked) {
 								Reflect.deleteProperty(next, "imagePixelBudget");
 								Reflect.deleteProperty(next, "imageMaxBytes");
 							}
 							onChange(next);
-						}
-					}, modality))
+						},
+						style: {
+							width: 44,
+							height: 24,
+							flex: "0 0 auto",
+							borderRadius: 12,
+							border: "none",
+							padding: 2,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: selected.includes("image") ? "flex-end" : "flex-start",
+							background: selected.includes("image") ? "var(--dsw-alias-brand-primary)" : "var(--dsw-alias-state-idle-primary)",
+							cursor: disabled ? "default" : "pointer",
+							opacity: disabled ? 0.5 : 1
+						},
+						children: (0, react_jsx_runtime.jsx)("span", {
+							style: {
+								width: 20,
+								height: 20,
+								borderRadius: "50%",
+								background: "#fff",
+								display: "block"
+							}
+						})
+					})
 				})]
 			});
 		}
@@ -3213,6 +3240,7 @@ window.__ModuleLoader__.load({
 			bulkClear: "Clear selection",
 			bulkApply: "Enable selected ({count})",
 			bulkCancel: "Cancel",
+			imageInput: "Image input",
 			autoConfigureModels: "Configure all models",
 			autoConfigureHint: "Fill in context window, output cap, image input and thinking levels from the endpoint and the capability table for every model; existing values are kept",
 			fetchModelConfig: "Fetch config",
@@ -3349,6 +3377,7 @@ window.__ModuleLoader__.load({
 			bulkClear: "取消全选",
 			bulkApply: "开启所选（{count}）",
 			bulkCancel: "取消",
+			imageInput: "支持图片输入",
 			autoConfigureModels: "自动配置所有模型",
 			autoConfigureHint: "从端点与模型能力表为每个模型补齐上下文窗口、输出上限、图片与思考档位；已有值保持不动",
 			fetchModelConfig: "获取配置",
