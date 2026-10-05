@@ -270,6 +270,91 @@ window.__ModuleLoader__.load({
 				}) : null]
 			});
 		}
+		/** Upstream capability dataset: LiteLLM's model price/capacity table (MIT). */
+		const GRAFT_PRESET_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json";
+		const GRAFT_PRESET_KEY = "dsh-reasoning-effort/model-presets/v1";
+		const GRAFT_PRESET_TTL = 1440 * 60 * 1000;
+		/** A positive integer fact, else 0. */
+		function graftPositive(value) {
+			return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+		}
+		/** The id of one row, or an empty string. */
+		function graftId(row) {
+			return row !== null && typeof row === "object" && typeof row.id === "string" ? row.id : "";
+		}
+		/**
+		* Compress the upstream dataset into `model id -> [vision, reasoning, maxIn, maxOut]`.
+		* Only `mode === "chat"` rows carrying a fact survive; 0 means "no fact".
+		*/
+		function graftPresetTable(payload) {
+			const merged = /* @__PURE__ */ new Map();
+			if (payload === null || typeof payload !== "object") return {};
+			for (const [key, value] of Object.entries(payload)) {
+				if (value === null || typeof value !== "object" || value.mode !== "chat") continue;
+				const facts = [value.supports_vision === true ? 1 : 0, value.supports_reasoning === true ? 1 : 0, graftPositive(value.max_input_tokens), graftPositive(value.max_output_tokens)];
+				if (facts.every((fact) => fact === 0)) continue;
+				const normalized = key.trim().toLowerCase();
+				const slash = normalized.lastIndexOf("/");
+				const bare = slash < 0 ? normalized : normalized.slice(slash + 1);
+				const current = merged.get(bare);
+				merged.set(bare, current === void 0 ? facts : [current[0] || facts[0], current[1] || facts[1], Math.max(current[2], facts[2]), Math.max(current[3], facts[3])]);
+			}
+			return Object.fromEntries(merged);
+		}
+		/** Look one id up, falling back to shorter dash segments for dated releases. */
+		function graftPresetFor(table, id) {
+			let key = String(id).trim().toLowerCase();
+			for (;;) {
+				if (key in table) return table[key];
+				const dash = key.lastIndexOf("-");
+				if (dash <= 0) return void 0;
+				key = key.slice(0, dash);
+			}
+		}
+		/** Load the capability table, falling back to a day-old browser cache. */
+		async function graftLoadPresets() {
+			let cached;
+			try {
+				cached = typeof localStorage === "undefined" ? void 0 : JSON.parse(localStorage.getItem(GRAFT_PRESET_KEY) ?? "null");
+			} catch {
+				cached = void 0;
+			}
+			if (cached !== null && typeof cached === "object" && typeof cached.at === "number" && Date.now() - cached.at < GRAFT_PRESET_TTL && cached.table !== void 0) return cached.table;
+			if (typeof fetch !== "function") return cached?.table;
+			try {
+				const response = await fetch(GRAFT_PRESET_URL, { cache: "no-store" });
+				if (!response.ok) return cached?.table;
+				const table = graftPresetTable(await response.json());
+				try {
+					localStorage?.setItem(GRAFT_PRESET_KEY, JSON.stringify({ at: Date.now(), table }));
+				} catch {}
+				return table;
+			} catch {
+				return cached?.table;
+			}
+		}
+		/**
+		* The partial write one row can learn from the endpoint and the table.
+		* Existing values always win, and a field no source actually knows stays
+		* untouched — otherwise an unknown row would silently lose image input.
+		* @param model - the row.
+		* @param endpoint - the endpoint's advertisement for it, if any.
+		* @param presets - the capability table.
+		* @returns the fields to merge into the row.
+		*/
+		function graftConfig(model, endpoint, presets) {
+			const row = model !== null && typeof model === "object" ? model : {};
+			const facts = presets === void 0 ? void 0 : graftPresetFor(presets, graftId(row));
+			const add = {};
+			const contextWindow = graftPositive(endpoint?.contextWindow) || graftPositive(facts?.[2]);
+			if (row.contextWindow === void 0 && contextWindow > 0) add.contextWindow = contextWindow;
+			const maxTokens = graftPositive(endpoint?.maxTokens) || graftPositive(facts?.[3]);
+			if (row.maxTokens === void 0 && maxTokens > 0) add.maxTokens = maxTokens;
+			const modalities = Array.isArray(endpoint?.inputModalities) ? endpoint.inputModalities : void 0;
+			if (row.input === void 0 && (modalities !== void 0 || facts !== void 0)) add.input = (modalities !== void 0 ? modalities.includes("image") : facts[0] === 1) ? ["text", "image"] : ["text"];
+			if (row.reasoningEfforts === void 0 && facts?.[1] === 1) add.reasoningEfforts = reasoningEffortsOf(REASONING_DEFAULT_LEVELS);
+			return add;
+		}
 		/**
 		* Enable the default level set on several rows at once. Selecting only
 		* declaration-less rows keeps an existing choice untouched; like every other
@@ -358,6 +443,14 @@ window.__ModuleLoader__.load({
 							},
 							onBlur: field === "id" ? (event) => props.onIdBlur?.(event.target.value) : void 0
 						}, field)),
+						props.onFetchConfig === void 0 ? null : (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: ModelsSection_module_css_default["linkButton"],
+							disabled,
+							title: t("fetchModelConfigHint"),
+							onClick: props.onFetchConfig,
+							children: t("fetchModelConfig")
+						}),
 						(0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: ModelsSection_module_css_default["iconButton"],
@@ -824,6 +917,59 @@ window.__ModuleLoader__.load({
 					setBusy(false);
 				}
 			};
+			/** Ask the endpoint once, in the same shape the official fetch uses. */
+			const graftDiscover = async () => {
+				const answer = await operations.discoverModels(probe.settingsNs, {
+					...probe.provider === void 0 ? {} : { provider: probe.provider },
+					...probe.baseURL === void 0 || probe.baseURL.length === 0 ? {} : { baseURL: probe.baseURL },
+					...probe.api === void 0 ? {} : { api: probe.api },
+					...probe.apiKey === void 0 ? {} : { apiKey: probe.apiKey }
+				});
+				return answer.kind === "found" ? answer.models : [];
+			};
+			/** Fill the rows a source actually knows something about. */
+			const graftAll = async () => {
+				setBusy(true);
+				setFailure(void 0);
+				try {
+					const [found, presets] = await Promise.all([graftDiscover(), graftLoadPresets()]);
+					const endpoint = new Map(found.map((model) => [model.id, model]));
+					let touched = 0;
+					const next = models.map((model) => {
+						const add = graftConfig(model, endpoint.get(graftId(model)), presets);
+						if (Object.keys(add).length === 0) return model;
+						touched += 1;
+						return {
+							...model,
+							...add
+						};
+					});
+					if (touched === 0) {
+						setFailure(t("configNone"));
+						return;
+					}
+					onChange(next);
+				} finally {
+					setBusy(false);
+				}
+			};
+			/** Fill exactly one row, leaving the rest alone. */
+			const graftOne = async (index) => {
+				setBusy(true);
+				setFailure(void 0);
+				try {
+					const [found, presets] = await Promise.all([graftDiscover(), graftLoadPresets()]);
+					const endpoint = new Map(found.map((model) => [model.id, model]));
+					const add = graftConfig(models[index], endpoint.get(graftId(models[index])), presets);
+					if (Object.keys(add).length === 0) {
+						setFailure(t("configNone"));
+						return;
+					}
+					patch(index, add);
+				} finally {
+					setBusy(false);
+				}
+			};
 			const closePicker = () => {
 				setCandidates(void 0);
 				setPicked(/* @__PURE__ */ new Set());
@@ -893,6 +1039,16 @@ window.__ModuleLoader__.load({
 									fetchModels();
 								},
 								children: busy ? t("fetching") : t("fetchModels")
+							}),
+							(0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: ModelsSection_module_css_default["linkButton"],
+								disabled: disabled || busy,
+								title: t("autoConfigureHint"),
+								onClick: () => {
+									graftAll();
+								},
+								children: t("autoConfigureModels")
 							})
 						]
 					}),
@@ -938,6 +1094,9 @@ window.__ModuleLoader__.load({
 								onChange(models.map((row, at) => at === index ? next : row));
 							},
 							thinking: {},
+							onFetchConfig: () => {
+								graftOne(index);
+							},
 							onToggle: () => {
 								toggleExpanded(index);
 							},
@@ -3054,6 +3213,11 @@ window.__ModuleLoader__.load({
 			bulkClear: "Clear selection",
 			bulkApply: "Enable selected ({count})",
 			bulkCancel: "Cancel",
+			autoConfigureModels: "Configure all models",
+			autoConfigureHint: "Fill in context window, output cap, image input and thinking levels from the endpoint and the capability table for every model; existing values are kept",
+			fetchModelConfig: "Fetch config",
+			fetchModelConfigHint: "Fill in this model's caps, image input and thinking levels from the endpoint and the capability table; existing values are kept",
+			configNone: "Neither the endpoint nor the capability table had anything to write; existing values are unchanged.",
 			"level.off": "off（关闭）",
 			"level.minimal": "minimal（最低）",
 			"level.low": "low（低）",
@@ -3185,6 +3349,11 @@ window.__ModuleLoader__.load({
 			bulkClear: "取消全选",
 			bulkApply: "开启所选（{count}）",
 			bulkCancel: "取消",
+			autoConfigureModels: "自动配置所有模型",
+			autoConfigureHint: "从端点与模型能力表为每个模型补齐上下文窗口、输出上限、图片与思考档位；已有值保持不动",
+			fetchModelConfig: "获取配置",
+			fetchModelConfigHint: "从端点与模型能力表为这个模型补齐上限、图片与思考档位；已有值保持不动",
+			configNone: "端点与能力表都没有可写入的配置；已有值保持不变。",
 			"level.off": "off（关闭）",
 			"level.minimal": "minimal（最低）",
 			"level.low": "low（低）",

@@ -101,6 +101,91 @@ const THINKING = `\t\t/** Levels the pi-ai adapter accepts as \`reasoningEfforts
 \t\t\t\t}) : null]
 \t\t\t});
 \t\t}
+\t\t/** Upstream capability dataset: LiteLLM's model price/capacity table (MIT). */
+\t\tconst GRAFT_PRESET_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json";
+\t\tconst GRAFT_PRESET_KEY = "dsh-reasoning-effort/model-presets/v1";
+\t\tconst GRAFT_PRESET_TTL = 1440 * 60 * 1000;
+\t\t/** A positive integer fact, else 0. */
+\t\tfunction graftPositive(value) {
+\t\t\treturn typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 0;
+\t\t}
+\t\t/** The id of one row, or an empty string. */
+\t\tfunction graftId(row) {
+\t\t\treturn row !== null && typeof row === "object" && typeof row.id === "string" ? row.id : "";
+\t\t}
+\t\t/**
+\t\t* Compress the upstream dataset into \`model id -> [vision, reasoning, maxIn, maxOut]\`.
+\t\t* Only \`mode === "chat"\` rows carrying a fact survive; 0 means "no fact".
+\t\t*/
+\t\tfunction graftPresetTable(payload) {
+\t\t\tconst merged = /* @__PURE__ */ new Map();
+\t\t\tif (payload === null || typeof payload !== "object") return {};
+\t\t\tfor (const [key, value] of Object.entries(payload)) {
+\t\t\t\tif (value === null || typeof value !== "object" || value.mode !== "chat") continue;
+\t\t\t\tconst facts = [value.supports_vision === true ? 1 : 0, value.supports_reasoning === true ? 1 : 0, graftPositive(value.max_input_tokens), graftPositive(value.max_output_tokens)];
+\t\t\t\tif (facts.every((fact) => fact === 0)) continue;
+\t\t\t\tconst normalized = key.trim().toLowerCase();
+\t\t\t\tconst slash = normalized.lastIndexOf("/");
+\t\t\t\tconst bare = slash < 0 ? normalized : normalized.slice(slash + 1);
+\t\t\t\tconst current = merged.get(bare);
+\t\t\t\tmerged.set(bare, current === void 0 ? facts : [current[0] || facts[0], current[1] || facts[1], Math.max(current[2], facts[2]), Math.max(current[3], facts[3])]);
+\t\t\t}
+\t\t\treturn Object.fromEntries(merged);
+\t\t}
+\t\t/** Look one id up, falling back to shorter dash segments for dated releases. */
+\t\tfunction graftPresetFor(table, id) {
+\t\t\tlet key = String(id).trim().toLowerCase();
+\t\t\tfor (;;) {
+\t\t\t\tif (key in table) return table[key];
+\t\t\t\tconst dash = key.lastIndexOf("-");
+\t\t\t\tif (dash <= 0) return void 0;
+\t\t\t\tkey = key.slice(0, dash);
+\t\t\t}
+\t\t}
+\t\t/** Load the capability table, falling back to a day-old browser cache. */
+\t\tasync function graftLoadPresets() {
+\t\t\tlet cached;
+\t\t\ttry {
+\t\t\t\tcached = typeof localStorage === "undefined" ? void 0 : JSON.parse(localStorage.getItem(GRAFT_PRESET_KEY) ?? "null");
+\t\t\t} catch {
+\t\t\t\tcached = void 0;
+\t\t\t}
+\t\t\tif (cached !== null && typeof cached === "object" && typeof cached.at === "number" && Date.now() - cached.at < GRAFT_PRESET_TTL && cached.table !== void 0) return cached.table;
+\t\t\tif (typeof fetch !== "function") return cached?.table;
+\t\t\ttry {
+\t\t\t\tconst response = await fetch(GRAFT_PRESET_URL, { cache: "no-store" });
+\t\t\t\tif (!response.ok) return cached?.table;
+\t\t\t\tconst table = graftPresetTable(await response.json());
+\t\t\t\ttry {
+\t\t\t\t\tlocalStorage?.setItem(GRAFT_PRESET_KEY, JSON.stringify({ at: Date.now(), table }));
+\t\t\t\t} catch {}
+\t\t\t\treturn table;
+\t\t\t} catch {
+\t\t\t\treturn cached?.table;
+\t\t\t}
+\t\t}
+\t\t/**
+\t\t* The partial write one row can learn from the endpoint and the table.
+\t\t* Existing values always win, and a field no source actually knows stays
+\t\t* untouched — otherwise an unknown row would silently lose image input.
+\t\t* @param model - the row.
+\t\t* @param endpoint - the endpoint's advertisement for it, if any.
+\t\t* @param presets - the capability table.
+\t\t* @returns the fields to merge into the row.
+\t\t*/
+\t\tfunction graftConfig(model, endpoint, presets) {
+\t\t\tconst row = model !== null && typeof model === "object" ? model : {};
+\t\t\tconst facts = presets === void 0 ? void 0 : graftPresetFor(presets, graftId(row));
+\t\t\tconst add = {};
+\t\t\tconst contextWindow = graftPositive(endpoint?.contextWindow) || graftPositive(facts?.[2]);
+\t\t\tif (row.contextWindow === void 0 && contextWindow > 0) add.contextWindow = contextWindow;
+\t\t\tconst maxTokens = graftPositive(endpoint?.maxTokens) || graftPositive(facts?.[3]);
+\t\t\tif (row.maxTokens === void 0 && maxTokens > 0) add.maxTokens = maxTokens;
+\t\t\tconst modalities = Array.isArray(endpoint?.inputModalities) ? endpoint.inputModalities : void 0;
+\t\t\tif (row.input === void 0 && (modalities !== void 0 || facts !== void 0)) add.input = (modalities !== void 0 ? modalities.includes("image") : facts[0] === 1) ? ["text", "image"] : ["text"];
+\t\t\tif (row.reasoningEfforts === void 0 && facts?.[1] === 1) add.reasoningEfforts = reasoningEffortsOf(REASONING_DEFAULT_LEVELS);
+\t\t\treturn add;
+\t\t}
 \t\t//#region lib/types/client/ModelRow.js`;
 
 patch("ModelThinking component", "\t\t//#region lib/types/client/ModelRow.js", THINKING);
@@ -197,13 +282,104 @@ patch("bulk placement", `\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {
 \t\t\t\t\t\tclassName: ModelsSection_module_css_default["modelList"],
 \t\t\t\t\t\tchildren: models.map((model, index) => (0, react_jsx_runtime.jsx)(ModelRow, {`);
 
+// --- 3c. per-row and catalog-wide configuration from the endpoint + table ------
+patch("editor config actions", `\t\t\tconst closePicker = () => {`, `\t\t\t/** Ask the endpoint once, in the same shape the official fetch uses. */
+\t\t\tconst graftDiscover = async () => {
+\t\t\t\tconst answer = await operations.discoverModels(probe.settingsNs, {
+\t\t\t\t\t...probe.provider === void 0 ? {} : { provider: probe.provider },
+\t\t\t\t\t...probe.baseURL === void 0 || probe.baseURL.length === 0 ? {} : { baseURL: probe.baseURL },
+\t\t\t\t\t...probe.api === void 0 ? {} : { api: probe.api },
+\t\t\t\t\t...probe.apiKey === void 0 ? {} : { apiKey: probe.apiKey }
+\t\t\t\t});
+\t\t\t\treturn answer.kind === "found" ? answer.models : [];
+\t\t\t};
+\t\t\t/** Fill the rows a source actually knows something about. */
+\t\t\tconst graftAll = async () => {
+\t\t\t\tsetBusy(true);
+\t\t\t\tsetFailure(void 0);
+\t\t\t\ttry {
+\t\t\t\t\tconst [found, presets] = await Promise.all([graftDiscover(), graftLoadPresets()]);
+\t\t\t\t\tconst endpoint = new Map(found.map((model) => [model.id, model]));
+\t\t\t\t\tlet touched = 0;
+\t\t\t\t\tconst next = models.map((model) => {
+\t\t\t\t\t\tconst add = graftConfig(model, endpoint.get(graftId(model)), presets);
+\t\t\t\t\t\tif (Object.keys(add).length === 0) return model;
+\t\t\t\t\t\ttouched += 1;
+\t\t\t\t\t\treturn {
+\t\t\t\t\t\t\t...model,
+\t\t\t\t\t\t\t...add
+\t\t\t\t\t\t};
+\t\t\t\t\t});
+\t\t\t\t\tif (touched === 0) {
+\t\t\t\t\t\tsetFailure(t("configNone"));
+\t\t\t\t\t\treturn;
+\t\t\t\t\t}
+\t\t\t\t\tonChange(next);
+\t\t\t\t} finally {
+\t\t\t\t\tsetBusy(false);
+\t\t\t\t}
+\t\t\t};
+\t\t\t/** Fill exactly one row, leaving the rest alone. */
+\t\t\tconst graftOne = async (index) => {
+\t\t\t\tsetBusy(true);
+\t\t\t\tsetFailure(void 0);
+\t\t\t\ttry {
+\t\t\t\t\tconst [found, presets] = await Promise.all([graftDiscover(), graftLoadPresets()]);
+\t\t\t\t\tconst endpoint = new Map(found.map((model) => [model.id, model]));
+\t\t\t\t\tconst add = graftConfig(models[index], endpoint.get(graftId(models[index])), presets);
+\t\t\t\t\tif (Object.keys(add).length === 0) {
+\t\t\t\t\t\tsetFailure(t("configNone"));
+\t\t\t\t\t\treturn;
+\t\t\t\t\t}
+\t\t\t\t\tpatch(index, add);
+\t\t\t\t} finally {
+\t\t\t\t\tsetBusy(false);
+\t\t\t\t}
+\t\t\t};
+\t\t\tconst closePicker = () => {`);
+
+patch("auto-configure button", `\t\t\t\t\t\t\t\tchildren: busy ? t("fetching") : t("fetchModels")
+\t\t\t\t\t\t\t})
+\t\t\t\t\t\t]`, `\t\t\t\t\t\t\t\tchildren: busy ? t("fetching") : t("fetchModels")
+\t\t\t\t\t\t\t}),
+\t\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["linkButton"],
+\t\t\t\t\t\t\t\tdisabled: disabled || busy,
+\t\t\t\t\t\t\t\ttitle: t("autoConfigureHint"),
+\t\t\t\t\t\t\t\tonClick: () => {
+\t\t\t\t\t\t\t\t\tgraftAll();
+\t\t\t\t\t\t\t\t},
+\t\t\t\t\t\t\t\tchildren: t("autoConfigureModels")
+\t\t\t\t\t\t\t})
+\t\t\t\t\t\t]`);
+
+patch("per-row button", `\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["iconButton"],
+\t\t\t\t\t\t\t"aria-label": \`\${t("modelAdvanced")} \${String(position)}\`,`, `\t\t\t\t\t\tprops.onFetchConfig === void 0 ? null : (0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["linkButton"],
+\t\t\t\t\t\t\tdisabled,
+\t\t\t\t\t\t\ttitle: t("fetchModelConfigHint"),
+\t\t\t\t\t\t\tonClick: props.onFetchConfig,
+\t\t\t\t\t\t\tchildren: t("fetchModelConfig")
+\t\t\t\t\t\t}),
+\t\t\t\t\t\t(0, react_jsx_runtime.jsx)("button", {
+\t\t\t\t\t\t\ttype: "button",
+\t\t\t\t\t\t\tclassName: ModelsSection_module_css_default["iconButton"],
+\t\t\t\t\t\t\t"aria-label": \`\${t("modelAdvanced")} \${String(position)}\`,`);
+
 // --- 4. feed it from the pi-ai editor (not the DeepSeek catalog) ---------------
 patch("pi-ai row wiring", `\t\t\t\t\t\t\tonChange: (next) => {
 \t\t\t\t\t\t\t\tonChange(models.map((row, at) => at === index ? next : row));
 \t\t\t\t\t\t\t},`, `\t\t\t\t\t\t\tonChange: (next) => {
 \t\t\t\t\t\t\t\tonChange(models.map((row, at) => at === index ? next : row));
 \t\t\t\t\t\t\t},
-\t\t\t\t\t\t\tthinking: {},`);
+\t\t\t\t\t\t\tthinking: {},
+\t\t\t\t\t\t\tonFetchConfig: () => {
+\t\t\t\t\t\t\t\tgraftOne(index);
+\t\t\t\t\t\t\t},`);
 
 // --- 5. dictionaries -----------------------------------------------------------
 const EN_KEYS = `\t\t\tthinkingMode: "Thinking mode",
@@ -214,6 +390,11 @@ const EN_KEYS = `\t\t\tthinkingMode: "Thinking mode",
 \t\t\tbulkClear: "Clear selection",
 \t\t\tbulkApply: "Enable selected ({count})",
 \t\t\tbulkCancel: "Cancel",
+\t\t\tautoConfigureModels: "Configure all models",
+\t\t\tautoConfigureHint: "Fill in context window, output cap, image input and thinking levels from the endpoint and the capability table for every model; existing values are kept",
+\t\t\tfetchModelConfig: "Fetch config",
+\t\t\tfetchModelConfigHint: "Fill in this model's caps, image input and thinking levels from the endpoint and the capability table; existing values are kept",
+\t\t\tconfigNone: "Neither the endpoint nor the capability table had anything to write; existing values are unchanged.",
 \t\t\t"level.off": "off（关闭）",
 \t\t\t"level.minimal": "minimal（最低）",
 \t\t\t"level.low": "low（低）",
@@ -230,6 +411,11 @@ const ZH_KEYS = `\t\t\tthinkingMode: "思考模式",
 \t\t\tbulkClear: "取消全选",
 \t\t\tbulkApply: "开启所选（{count}）",
 \t\t\tbulkCancel: "取消",
+\t\t\tautoConfigureModels: "自动配置所有模型",
+\t\t\tautoConfigureHint: "从端点与模型能力表为每个模型补齐上下文窗口、输出上限、图片与思考档位；已有值保持不动",
+\t\t\tfetchModelConfig: "获取配置",
+\t\t\tfetchModelConfigHint: "从端点与模型能力表为这个模型补齐上限、图片与思考档位；已有值保持不动",
+\t\t\tconfigNone: "端点与能力表都没有可写入的配置；已有值保持不变。",
 \t\t\t"level.off": "off（关闭）",
 \t\t\t"level.minimal": "minimal（最低）",
 \t\t\t"level.low": "low（低）",
