@@ -36,7 +36,7 @@
       }
     }
   },
-  "description": "Compact provider/model menu with a separate Chinese reasoning-effort selector for DeepSeek Harness.",
+  "description": "输入框旁的紧凑双栏模型选择器，支持切换服务商、模型和推理等级。",
   "keywords": [
     "dsh",
     "dsh-plugin",
