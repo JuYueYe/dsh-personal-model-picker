@@ -1036,12 +1036,18 @@ window.__ModuleLoader__.load({
 			const activeCandidates = candidates ?? [];
 			const normalizedCandidateQuery = candidateQuery.trim().toLowerCase();
 			const visibleCandidates = normalizedCandidateQuery.length === 0 ? activeCandidates : activeCandidates.filter((candidate) => candidate.id.toLowerCase().includes(normalizedCandidateQuery) || candidate.name?.toLowerCase().includes(normalizedCandidateQuery) === true);
-			const allVisibleCandidatesPicked = visibleCandidates.length > 0 && visibleCandidates.every((candidate) => picked.has(candidate.id));
+			const existingModelIds = new Set(models.map((model) => textOf(model, "id")));
+			const alreadyAdded = (candidate) => existingModelIds.has(candidate.id);
+			const selectableVisibleCandidates = visibleCandidates.filter((candidate) => !alreadyAdded(candidate));
+			const allVisibleCandidatesPicked = selectableVisibleCandidates.length > 0 && selectableVisibleCandidates.every((candidate) => picked.has(candidate.id));
 			const toggleVisibleCandidates = () => {
 				setPicked((current) => {
-					if (visibleCandidates.every((candidate) => current.has(candidate.id))) return /* @__PURE__ */ new Set();
 					const next = new Set(current);
-					for (const candidate of visibleCandidates) next.add(candidate.id);
+					if (allVisibleCandidatesPicked) {
+						for (const candidate of selectableVisibleCandidates) next.delete(candidate.id);
+					} else {
+						for (const candidate of selectableVisibleCandidates) next.add(candidate.id);
+					}
 					return next;
 				});
 			};
@@ -1195,7 +1201,7 @@ window.__ModuleLoader__.load({
 							}), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 								variant: "ghost",
 								size: "sm",
-								disabled: visibleCandidates.length === 0,
+								disabled: selectableVisibleCandidates.length === 0,
 								onClick: toggleVisibleCandidates,
 								children: t(allVisibleCandidatesPicked ? "fetchDeselectAll" : "fetchSelectAll")
 							})]
@@ -1211,14 +1217,15 @@ window.__ModuleLoader__.load({
 									className: ModelsSection_module_css_default["candidateLabel"],
 									children: [(0, react_jsx_runtime.jsx)("input", {
 										type: "checkbox",
-										checked: picked.has(candidate.id),
+										checked: alreadyAdded(candidate) || picked.has(candidate.id),
+										disabled: disabled || alreadyAdded(candidate),
 										onChange: () => {
-											toggle(candidate.id);
+											if (!alreadyAdded(candidate)) toggle(candidate.id);
 										}
 									}), (0, react_jsx_runtime.jsx)("span", {
 										className: ModelsSection_module_css_default["candidateId"],
 										title: candidate.name ?? candidate.id,
-										children: candidate.id
+										children: alreadyAdded(candidate) ? `${candidate.id} · ${t("fetchAlreadyAdded")}` : candidate.id
 									})]
 								})
 							}, candidate.id))
@@ -3290,6 +3297,7 @@ window.__ModuleLoader__.load({
 			fetchNoMatches: "No matching models.",
 			fetchSelectAll: "Select all",
 			fetchDeselectAll: "Deselect all",
+			fetchAlreadyAdded: "Already added",
 			fetchAdopt: "Add selected",
 			customTag: "Custom",
 			customRoute: "Provider ID",
@@ -3427,6 +3435,7 @@ window.__ModuleLoader__.load({
 			fetchNoMatches: "没有匹配的模型。",
 			fetchSelectAll: "全选",
 			fetchDeselectAll: "取消全选",
+			fetchAlreadyAdded: "已添加",
 			fetchAdopt: "添加所选",
 			customTag: "自定义",
 			customRoute: "Provider ID",

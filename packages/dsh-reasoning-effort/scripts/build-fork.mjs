@@ -29,6 +29,39 @@ function patch(name, from, to) {
 // --- 1. own the module id ------------------------------------------------------
 patch("module id", 'id: "@deepseek-ai/dsh-client-ui-settings-models",', 'id: "dsh-reasoning-effort",');
 
+// --- 2. clarify models that are already in the provider catalog ---------------
+patch("existing model selection state", `			const visibleCandidates = normalizedCandidateQuery.length === 0 ? activeCandidates : activeCandidates.filter((candidate) => candidate.id.toLowerCase().includes(normalizedCandidateQuery) || candidate.name?.toLowerCase().includes(normalizedCandidateQuery) === true);
+			const allVisibleCandidatesPicked = visibleCandidates.length > 0 && visibleCandidates.every((candidate) => picked.has(candidate.id));
+			const toggleVisibleCandidates = () => {
+				setPicked((current) => {
+					if (visibleCandidates.every((candidate) => current.has(candidate.id))) return /* @__PURE__ */ new Set();
+					const next = new Set(current);
+					for (const candidate of visibleCandidates) next.add(candidate.id);
+					return next;
+				});
+			};`, `			const visibleCandidates = normalizedCandidateQuery.length === 0 ? activeCandidates : activeCandidates.filter((candidate) => candidate.id.toLowerCase().includes(normalizedCandidateQuery) || candidate.name?.toLowerCase().includes(normalizedCandidateQuery) === true);
+			const existingModelIds = new Set(models.map((model) => textOf(model, "id")));
+			const alreadyAdded = (candidate) => existingModelIds.has(candidate.id);
+			const selectableVisibleCandidates = visibleCandidates.filter((candidate) => !alreadyAdded(candidate));
+			const allVisibleCandidatesPicked = selectableVisibleCandidates.length > 0 && selectableVisibleCandidates.every((candidate) => picked.has(candidate.id));
+			const toggleVisibleCandidates = () => {
+				setPicked((current) => {
+					const next = new Set(current);
+					if (allVisibleCandidatesPicked) {
+						for (const candidate of selectableVisibleCandidates) next.delete(candidate.id);
+					} else {
+						for (const candidate of selectableVisibleCandidates) next.add(candidate.id);
+					}
+					return next;
+				});
+			};`);
+
+patch("existing models stay checked", 'checked: picked.has(candidate.id),', 'checked: alreadyAdded(candidate) || picked.has(candidate.id),\n\t\t\t\t\t\t\t\t\t\tdisabled: disabled || alreadyAdded(candidate),');
+patch("already-added models cannot be toggled", 'toggle(candidate.id);', 'if (!alreadyAdded(candidate)) toggle(candidate.id);');
+patch("show already-added status", 'children: candidate.id', 'children: alreadyAdded(candidate) ? `${candidate.id} · ${t("fetchAlreadyAdded")}` : candidate.id');
+
+patch("select only models that can be added", `								disabled: visibleCandidates.length === 0,`, `								disabled: selectableVisibleCandidates.length === 0,`);
+
 // --- 2. the reasoning-effort control -------------------------------------------
 /** Levels `@deepseek-ai/dsh-llm-pi-ai` accepts as `reasoningEfforts` keys. */
 const THINKING = `\t\t/** Levels the pi-ai adapter accepts as \`reasoningEfforts\` keys, ascending. */
@@ -518,6 +551,8 @@ const ZH_KEYS = `\t\t\tthinkingMode: "思考模式",
 `;
 patch("en dictionary", '\t\t\tmodelInputImage: "Image",\n', `\t\t\tmodelInputImage: "Image",\n${EN_KEYS}`);
 patch("zh dictionary", '\t\t\tmodelInputImage: "图片",\n', `\t\t\tmodelInputImage: "图片",\n${ZH_KEYS}`);
+patch("en already-added label", '\t\t\tfetchDeselectAll: "Deselect all",\n', '\t\t\tfetchDeselectAll: "Deselect all",\n\t\t\tfetchAlreadyAdded: "Already added",\n');
+patch("zh already-added label", '\t\t\tfetchDeselectAll: "取消全选",\n', '\t\t\tfetchDeselectAll: "取消全选",\n\t\t\tfetchAlreadyAdded: "已添加",\n');
 
 writeFileSync(join(root, "dist", "client.cjs"), source, "utf8");
 console.log(`dist/client.cjs written: ${String(Buffer.byteLength(source))} bytes`);

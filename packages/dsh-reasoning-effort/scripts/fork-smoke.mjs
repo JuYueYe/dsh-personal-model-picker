@@ -60,6 +60,9 @@ check("adds the per-row fetch-config button", source.includes('t("fetchModelConf
 check("carries bilingual level labels", source.includes('"level.xhigh"') && source.includes("xhigh（很高）"));
 check("keeps the official reset control", source.includes('t("resetModels")'));
 check("keeps the official fetch control", source.includes('t("fetchModels")'));
+check("marks already-added models with a check and label", source.includes("checked: alreadyAdded(candidate) || picked.has(candidate.id)") && source.includes('fetchAlreadyAdded: "已添加"'));
+check("prevents reselecting models already in the provider", source.includes("disabled: disabled || alreadyAdded(candidate)"));
+check("select-all only targets models that can still be added", source.includes("const selectableVisibleCandidates = visibleCandidates.filter((candidate) => !alreadyAdded(candidate))") && source.includes("disabled: selectableVisibleCandidates.length === 0"));
 
 console.log("");
 if (failures.length > 0) {
