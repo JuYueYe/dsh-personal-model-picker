@@ -1,0 +1,18 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-artifacts-in-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Fails when dist/ is stale relative to src/ — the repo has no bundler,
+      # so this is the only guard against shipping an old bundle.
+      - run: npm run verify
+      - run: npm run check

@@ -69,7 +69,7 @@ function apply(ctx) {
 	ctx.effect(() => ctx.locale.register(NS, {
 		zh,
 		en
-	}), "ui-model-selection: dictionaries");
+	}), "dsh-personal-model-picker: dictionaries");
 	const t = ctx.locale.bind(NS);
 	ctx.plugin(ModelDirectoryResolver, { blockReason: () => t("blocked.composer") });
 	ctx.inject(["commandUi", "modelDirectories"], (scope) => {
@@ -94,7 +94,7 @@ function apply(ctx) {
 					await directory.select(selection);
 				}
 			}
-		}), "ui-model-selection: /model contribution");
+		}), "dsh-personal-model-picker: /model contribution");
 	});
 	ctx.inject(["slots", "modelDirectories"], (scope) => {
 		const models = scope.modelDirectories;
@@ -121,4 +121,4 @@ function apply(ctx) {
 exports.ModelDirectory = ModelDirectory;
 exports.ModelDirectoryResolver = ModelDirectoryResolver;
 exports.apply = apply;
-exports.inject = inject;
+exports.inject = inject;

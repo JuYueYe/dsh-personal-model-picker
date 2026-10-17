@@ -12,6 +12,27 @@
 * announces through the shared transient Toast anchored to the composer
 * card; the in-menu strip with Retry remains the catalog-load surface.
 */
+/** Effort level ids → dictionary keys. Adapters report opaque ids ("low", "xhigh"); the Host
+ * may instead hand back an already-localized display name, which passes through untouched. */
+const EFFORT_LABEL_KEYS = {
+	off: "effort.level.off",
+	minimal: "effort.level.minimal",
+	low: "effort.level.low",
+	medium: "effort.level.medium",
+	high: "effort.level.high",
+	xhigh: "effort.level.xhigh",
+	max: "effort.level.max"
+};
+/** Icon exports were renamed across DSH core versions (IconXxx14/16 → IconXxxRegular). Resolve
+ * them defensively: a missing export must render as "no icon" instead of throwing, because a
+ * throw inside the seat's render makes the slot ledger abdicate the whole model entry. */
+const iconOrNull = (Icon) => Icon ?? (() => null);
+const IconDataOutlineRegular = iconOrNull(_deepseek_ai_dsh_client_ui_primitives.IconDataOutlineRegular);
+const IconChevronDownOutlineRegular = iconOrNull(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular);
+const IconChevronRightOutlineRegular = iconOrNull(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular);
+const IconCheckOutlineRegular = iconOrNull(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular);
+const IconWarningOutlineRegular = iconOrNull(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular);
+const Toast = iconOrNull(_deepseek_ai_dsh_client_ui_primitives.Toast);
 /** Unplaced portal card: hidden but laid out at a fixed origin so offsetWidth/offsetHeight are real (Menu primitive's measure pass). */
 const MEASURE_STYLE = {
 	visibility: "hidden",
@@ -36,7 +57,10 @@ const MODEL_PANE_HEIGHT = 348;
 * @returns the trigger and, while open, the two-level menu.
 */
 function ModelSelect({ locked, available, directory, load, select, t }) {
-	const effortDisplayName = (value) => ({ off: "关闭", minimal: "最低", low: "低", medium: "中", high: "高", xhigh: "超高", max: "最高" })[String(value).toLowerCase()] ?? value;
+	const effortDisplayName = (value) => {
+		const key = EFFORT_LABEL_KEYS[String(value).toLowerCase()];
+		return key === void 0 ? value : t(key);
+	};
 	const state = (0, react.useSyncExternalStore)((fn) => directory.subscribe(fn), () => directory.getSnapshot());
 	const [open, setOpen] = (0, react.useState)(false);
 	const [pane, setPane] = (0, react.useState)("root");
@@ -101,7 +125,10 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			const MARGIN = 12;
 			const modelPane = pane.startsWith("model");
 			const anchor = rootRef.current?.getBoundingClientRect();
-			const width = Math.min(anchor?.width ?? 320, window.innerWidth - MARGIN * 2);
+			// The provider column has to show names in full, so the card may grow past the trigger
+			// area: at least 380px (a ~150px provider column once the 40% split applies), capped by
+			// the viewport. Names longer than the column wrap instead of ellipsizing.
+			const width = Math.min(Math.max(anchor?.width ?? 320, 420), window.innerWidth - MARGIN * 2, 560);
 			// Measure after applying the constrained width; both columns share this card.
 			if (menuRef.current && modelPane) {
 				menuRef.current.style.width = `${width}px`;
@@ -116,6 +143,9 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			setMenuPos({
 				left: x, top: y, boxSizing: "border-box", overflow: "hidden",
 				width: modelPane ? width : undefined, minWidth: modelPane ? 0 : undefined,
+				// Override the stylesheet's `max-width: min(420px, 100vw - 32px)` so the computed
+				// width above is the real ceiling; otherwise the provider column silently shrinks.
+				maxWidth: modelPane ? width : undefined,
 				height: modelPane ? MODEL_PANE_HEIGHT : undefined,
 				maxHeight: Math.max(80, rect.top - MARGIN - 8), borderRadius: 12
 			});
@@ -146,7 +176,9 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 		});
 	};
 	const moveFocus = (offset) => {
-		const items = itemRefs.current.filter((item) => item !== null);
+		// Disabled rows cannot take focus: skipping them keeps ArrowUp/Down responsive while
+		// a selection is in flight (every model row is disabled during `busy`).
+		const items = itemRefs.current.filter((item) => item !== null && !item.disabled);
 		if (items.length === 0) return;
 		const active = items.findIndex((item) => item === document.activeElement);
 		items[(Math.max(active, 0) + offset + items.length) % items.length]?.focus();
@@ -163,6 +195,17 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			moveFocus(event.key === "ArrowDown" ? 1 : -1);
 		}
 	};
+	/** Hover-intent delay: dragging the pointer diagonally from the provider column to the model
+	 * column crosses other provider rows; switching instantly would swap the list under the
+	 * cursor mid-travel. Clicking or focusing still switches immediately. */
+	const hoverTimer = (0, react.useRef)(0);
+	const schedulePane = (next) => {
+		window.clearTimeout(hoverTimer.current);
+		hoverTimer.current = window.setTimeout(() => setPane(next), 90);
+	};
+	(0, react.useEffect)(() => () => {
+		window.clearTimeout(hoverTimer.current);
+	}, []);
 	const onBlur = (event) => {
 		if (event.relatedTarget instanceof Node && (rootRef.current?.contains(event.relatedTarget) === true || menuRef.current?.contains(event.relatedTarget) === true)) return;
 		close();
@@ -250,7 +293,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 					else show();
 				},
 				children: [
-					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDataOutlineRegular, {
+					(0, react_jsx_runtime.jsx)(IconDataOutlineRegular, {
 						className: ModelSelect_module_css_default.triggerIcon,
 						size: 16
 					}),
@@ -258,7 +301,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 						className: ModelSelect_module_css_default.triggerLabel,
 						children: modelLabel
 					}),
-					(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: clsx(ModelSelect_module_css_default.chevron, open && ModelSelect_module_css_default.chevronOpen) })
+					(0, react_jsx_runtime.jsx)(IconChevronDownOutlineRegular, { className: clsx(ModelSelect_module_css_default.chevron, open && ModelSelect_module_css_default.chevronOpen) })
 				]
 			}),
 			(0, react_jsx_runtime.jsxs)("button", {
@@ -267,7 +310,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 				disabled: locked || busy,
 				title: effortChoices.length === 0 ? t("empty.efforts") : t("menu.effort"),
 				onClick: () => { if (open && pane === "effort") close(); else { setPane("effort"); setOpen(true); reload(); } },
-				children: [t("effort.prefix"), effortLabel ?? t("effort.providerDefault"), (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})]
+				children: [t("effort.prefix"), effortLabel ?? t("effort.providerDefault"), (0, react_jsx_runtime.jsx)(IconChevronDownOutlineRegular, {})]
 			}),
 			open && (0, react_dom.createPortal)((0, react_jsx_runtime.jsxs)("div", {
 				ref: menuRef,
@@ -295,7 +338,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								className: ModelSelect_module_css_default.cellValue,
 								children: modelLabel
 							}),
-							(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { className: ModelSelect_module_css_default.cellChevron })
+							(0, react_jsx_runtime.jsx)(IconChevronRightOutlineRegular, { className: ModelSelect_module_css_default.cellChevron })
 						]
 					}), (0, react_jsx_runtime.jsxs)("button", {
 						ref: itemRef(),
@@ -314,12 +357,12 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 								className: ModelSelect_module_css_default.cellValue,
 								children: effortLabel
 							}),
-							(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { className: ModelSelect_module_css_default.cellChevron })
+							(0, react_jsx_runtime.jsx)(IconChevronRightOutlineRegular, { className: ModelSelect_module_css_default.cellChevron })
 						]
 					})] }),
 					pane.startsWith("model") && (0, react_jsx_runtime.jsxs)("div", {
 						className: "personal-model-columns",
-						style: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 3fr)", gridTemplateRows: "28px minmax(0, 1fr)", width: "100%", height: "100%", minHeight: 0, overflow: "hidden" },
+						style: { display: "grid", gridTemplateColumns: "minmax(0, 40%) minmax(0, 1fr)", gridTemplateRows: "28px minmax(0, 1fr)", width: "100%", height: "100%", minHeight: 0, overflow: "hidden" },
 						children: [
 							(0, react_jsx_runtime.jsx)("div", { style: { gridColumn: 1, gridRow: 1, padding: "4px 6px", fontSize: 12 }, children: t("menu.provider") }),
 							(0, react_jsx_runtime.jsxs)("div", {
@@ -332,8 +375,8 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 											ref: itemRef(), title: group.name, type: "button", role: "menuitemradio", "aria-checked": providerSelected,
 											className: clsx(ModelSelect_module_css_default.option, providerActive && ModelSelect_module_css_default.selected),
 											style: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8 },
-											onMouseEnter: () => { setPane(`model:${group.id}`); }, onFocus: () => { setPane(`model:${group.id}`); }, onClick: () => { setPane(`model:${group.id}`); },
-											children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, children: (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.modelName, children: group.name }) }), providerSelected && (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) })]
+											onMouseEnter: () => { schedulePane(`model:${group.id}`); }, onFocus: () => { setPane(`model:${group.id}`); }, onClick: () => { setPane(`model:${group.id}`); },
+											children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, style: { minWidth: 0 }, children: (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.modelName, style: { whiteSpace: "normal", overflowWrap: "anywhere", textOverflow: "clip", lineHeight: "18px" }, children: group.name }) }), providerSelected && (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: (0, react_jsx_runtime.jsx)(IconCheckOutlineRegular, {}) })]
 										}, group.id);
 									}),
 									state.failures.map((failure) => (0, react_jsx_runtime.jsx)("div", { className: ModelSelect_module_css_default.warning, children: t("warning.groupLoad", { name: failure.name, message: failure.message }) }, failure.id))
@@ -347,7 +390,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 									return (0, react_jsx_runtime.jsxs)("button", {
 										ref: itemRef(), type: "button", role: "menuitemradio", "aria-checked": selected, className: clsx(ModelSelect_module_css_default.option, selected && ModelSelect_module_css_default.selected), title: model.name ?? model.id, disabled: busy,
 										onClick: () => { choose({ provider: activeGroup.id, model: model.id }); },
-										children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, style: { display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: model.name ?? model.id }), (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: selected ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : null })]
+										children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, style: { display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: model.name ?? model.id }), (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: selected ? (0, react_jsx_runtime.jsx)(IconCheckOutlineRegular, {}) : null })]
 									}, model.id);
 								})]
 							})
@@ -382,14 +425,14 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 							})
 						}), (0, react_jsx_runtime.jsx)("span", {
 							className: ModelSelect_module_css_default.check,
-							children: effectiveEffort === level.effort ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : null
+							children: effectiveEffort === level.effort ? (0, react_jsx_runtime.jsx)(IconCheckOutlineRegular, {}) : null
 						})]
 					}, level.key))] })
 				]
 			}), document.body),
-			toast !== null && (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+			toast !== null && (0, react_jsx_runtime.jsx)(Toast, {
 				text: toast.text,
-				icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconWarningOutlineRegular, {}),
+				icon: (0, react_jsx_runtime.jsx)(IconWarningOutlineRegular, {}),
 				anchor: rootRef.current?.closest("[data-composer-card]") ?? null,
 				onDone: () => {
 					setToast(null);

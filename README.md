@@ -84,6 +84,36 @@ pnpm update dsh-personal-model-picker
 
 停用该 bundle，或把它从 `dsh.profile.bundles` 移除，然后**重启宿主**，官方模型入口即恢复。本插件只禁用官方那一个 entry、不直接改官方文件，因此移除后不会留下需要手工修复的残留。
 
+## 变更
+
+### 1.1.4 · 1.1.5
+
+- **供应商名不再被截断**。左栏原来是 `1fr : 3fr`、卡片宽度又跟着触发器走，供应商名一长就只剩 `2gpt-...`、`disc...`。现在：卡片最窄 **420px**（上限 560px，受视口 `-24px` 夹紧）、两栏改成 **40% : 1fr**、供应商名 **`white-space: normal` + `overflow-wrap: anywhere` 换行**而不是省略号 —— 再长的名字也完整可见，行高随内容增长，列表照常滚动。
+- **同时压掉了样式表的 420px 上限**：`.menu` 里写着 `max-width: min(420px, 100vw - 32px)`，只改内联 `width` 的话实际仍被卡在 420，多算的宽度会静默失效。现在 `maxWidth` 一并用同一份计算值覆盖。
+
+### 1.1.3
+
+- **修**：`select()` 只处理了 `{ok:false}`，没兜住 RPC **抛异常**（连接断、超时）。异常时状态会永远停在 `selecting`，而 `busy` 会让所有模型行和推理等级触发器变成 `disabled` —— 用户连重试都点不了，只能整页刷新。现在异常同样落到 `status:"error"`，菜单里那根「重新加载」横条可以继续用。
+- **修**：推理等级名原来硬编码了七个中文（`关闭/最低/低/…`），英文字典里没有对应 key，英文界面下整栏仍是中文。改为 `effort.level.*` 七个字典键（zh/en 各一套），Host 已本地化好的显示名仍原样透传。
+- **修**：图标改防御式解析（`iconOrNull`）。核心把 `IconXxx14/16` 改名成 `IconXxxRegular` 之后，缺失导出会让 React 渲染 `<undefined/>` 抛错、槽位 `abdicate`、**整个模型入口消失**。现在缺图标只是少个图标。
+- **修**：`moveFocus` 跳过 `disabled` 行。选择进行中所有模型行都是 disabled，`focus()` 静默失败，方向键看着像失灵。
+- **改**：悬停换栏加了 90ms 意图延迟。指针从供应商列斜着移向模型列时会擦过别的供应商行，原来右栏会在移动途中跳一次；聚焦和点击仍然即时切换。
+- **清理**：错误信息与 effect 标签里残留的 `ui-model-selection:` 前缀改回本包名，排查日志时不再指向官方包。
+
+## 开发与构建
+
+**`src/` 是唯一需要手改的地方**，`dist/client.cjs` 由它生成：
+
+```bash
+npm run build     # 由 src/ 重新生成 dist/client.cjs + dist/index.js
+npm run verify    # 只校验 dist 是否与 src 一致（CI / prepack 用这个）
+npm run check     # 产物语法检查
+```
+
+`scripts/build.mjs` 做的是纯文本拼接（不引入打包器）：按固定顺序取 `src/` 的八个 region，套上 `window.__ModuleLoader__.load({id, factory})` 外壳与 `return module.exports;` 尾巴，并把换行统一归一成 LF（`.gitattributes` 虽然钉了 `eol=lf`，Windows 上的手改仍可能写进 CR）。新增 region 文件时，同时把它加进 `scripts/build.mjs` 的 `REGIONS` 数组。
+
+`prepack` 已挂 `verify` —— `npm pack` 或发布前如果 `dist/` 落后于 `src/`，会直接失败而不是静默发出旧产物。
+
 ## 许可与来源
 
 MIT，版权归上游，完整声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。React 与 DSH 宿主服务由宿主提供，本包不随附另一套运行时。

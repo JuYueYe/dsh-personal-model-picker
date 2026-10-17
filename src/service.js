@@ -59,9 +59,9 @@ var ModelDirectoryResolver = class extends _deepseek_ai_cordis.Service {
 		if (existing !== void 0) return existing;
 		const sessions = this.ctx.sessions;
 		const actx = sessions.scope(sessionId);
-		if (actx === void 0) throw new Error(`ui-model-selection: session "${String(sessionId)}" resolved no scope`);
+		if (actx === void 0) throw new Error(`dsh-personal-model-picker: session "${String(sessionId)}" resolved no scope`);
 		const binding = sessions.binding(sessionId);
-		if (binding === void 0) throw new Error(`ui-model-selection: session "${String(sessionId)}" resolved no binding`);
+		if (binding === void 0) throw new Error(`dsh-personal-model-picker: session "${String(sessionId)}" resolved no binding`);
 		const directory = new ModelDirectory(this.ctx.remote.session, sessionId, () => sessions.subagentAddress(sessionId) === void 0, this.catalog, binding.session.projections.faceOf("modelSelection"));
 		live.directories.set(sessionId, directory);
 		const conversation = this.ctx.get("conversation");
@@ -76,12 +76,12 @@ var ModelDirectoryResolver = class extends _deepseek_ai_cordis.Service {
 					stop();
 					conversation.blocks.set(sessionId, void 0);
 				};
-			}, "ui-model-selection: composer block");
+			}, "dsh-personal-model-picker: composer block");
 		}
 		actx.effect(() => () => {
 			directory.dispose();
 			live.directories.delete(sessionId);
-		}, "ui-model-selection: session directory");
+		}, "dsh-personal-model-picker: session directory");
 		return directory;
 	}
 };

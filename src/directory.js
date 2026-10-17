@@ -65,12 +65,27 @@ var ModelDirectory = class {
 			s.status = "selecting";
 			s.error = null;
 		});
-		const result = await this.sessions.selectModel({
-			sessionId: this.sessionId,
-			provider: selection.provider,
-			model: selection.model,
-			...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: selection.reasoningEffort }
-		});
+		let result;
+		try {
+			result = await this.sessions.selectModel({
+				sessionId: this.sessionId,
+				provider: selection.provider,
+				model: selection.model,
+				...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: selection.reasoningEffort }
+			});
+		}
+		catch (error) {
+			// A transport-level rejection (connection reset, RPC timeout) must not leave the
+			// store stuck on "selecting": every model row and the effort trigger are disabled
+			// while `busy`, so a stuck status is an unrecoverable UI short of a page reload.
+			if (this.disposed || generation !== this.generation) throw error;
+			const message = error instanceof Error ? error.message : String(error);
+			this.store.update((s) => {
+				s.status = "error";
+				s.error = message;
+			});
+			throw error;
+		}
 		if (this.disposed || generation !== this.generation) {
 			if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`);
 			return;
