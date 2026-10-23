@@ -6,12 +6,9 @@ DSH（DeepSeek Harness）的**紧凑双栏模型选择器**：左栏供应商、
 
 > **非官方插件**，改编自官方包 `@deepseek-ai/dsh-client-ui-model-selection`（MIT，`Copyright (c) 2026 DeepSeek`），不是 DeepSeek 发布或背书的作品。
 
-> **同作者的另一个插件已独立成库**：[`dsh-reasoning-effort`](https://github.com/JuYueYe/dsh-reasoning-effort) —— 设置 → 模型里每张 pi-ai 提供商卡片的模型目录编辑器（逐模型「思考模式」开关 + 七档勾选）。两者互相独立、无依赖，各自装各自的：
->
-> ```bash
-> dsh plugin --profile web add github:JuYueYe/dsh-personal-model-picker   # 本包：双栏选择器
-> dsh plugin --profile web add github:JuYueYe/dsh-reasoning-effort       # 那个：模型目录编辑器
-> ```
+```bash
+dsh plugin --profile web add github:JuYueYe/dsh-personal-model-picker
+```
 
 ## 改了什么
 
