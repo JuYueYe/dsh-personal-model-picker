@@ -49,7 +49,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "verify": "node scripts/build.mjs --verify",
+    "verify": "node scripts/build.mjs --verify && node scripts/selection-helpers.test.mjs",
     "check": "node --check dist/index.js && node --check dist/client.cjs",
     "prepack": "node scripts/build.mjs --verify"
   }

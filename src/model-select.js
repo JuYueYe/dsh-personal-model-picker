@@ -123,6 +123,7 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 			const rect = (pane === "effort" ? effortTriggerRef.current : triggerRef.current)?.getBoundingClientRect();
 			if (rect === void 0) return;
 			const MARGIN = 12;
+			const GAP = 8;
 			const modelPane = pane.startsWith("model");
 			const anchor = rootRef.current?.getBoundingClientRect();
 			// The provider column has to show names in full, so the card may grow past the trigger
@@ -134,20 +135,19 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 				menuRef.current.style.width = `${width}px`;
 				menuRef.current.style.minWidth = "0";
 				menuRef.current.style.height = `${MODEL_PANE_HEIGHT}px`;
-				menuRef.current.style.maxHeight = `${Math.max(80, rect.top - MARGIN - 8)}px`;
+				menuRef.current.style.maxHeight = "none";
 			}
 			const lw = menuRef.current?.offsetWidth ?? width;
 			const lh = menuRef.current?.offsetHeight ?? 196;
-			const x = Math.max(MARGIN, Math.min(rect.left, window.innerWidth - lw - MARGIN));
-			const y = Math.max(MARGIN, rect.top - 8 - lh);
+			const placement = menuPlacement(rect, { width: window.innerWidth, height: window.innerHeight }, { width: lw, height: lh }, { side: MARGIN, gap: GAP });
 			setMenuPos({
-				left: x, top: y, boxSizing: "border-box", overflow: "hidden",
-				width: modelPane ? width : undefined, minWidth: modelPane ? 0 : undefined,
+				left: placement.left, top: placement.top, boxSizing: "border-box", overflow: "hidden",
+				width: modelPane ? placement.width : undefined, minWidth: modelPane ? 0 : undefined,
 				// Override the stylesheet's `max-width: min(420px, 100vw - 32px)` so the computed
 				// width above is the real ceiling; otherwise the provider column silently shrinks.
-				maxWidth: modelPane ? width : undefined,
-				height: modelPane ? MODEL_PANE_HEIGHT : undefined,
-				maxHeight: Math.max(80, rect.top - MARGIN - 8), borderRadius: 12
+				maxWidth: modelPane ? placement.width : undefined,
+				height: modelPane ? placement.height : undefined,
+				maxHeight: placement.height, borderRadius: 12
 			});
 		};
 		place();
@@ -389,7 +389,10 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 									const selected = state.current?.provider === activeGroup.id && state.current.model === model.id;
 									return (0, react_jsx_runtime.jsxs)("button", {
 										ref: itemRef(), type: "button", role: "menuitemradio", "aria-checked": selected, className: clsx(ModelSelect_module_css_default.option, selected && ModelSelect_module_css_default.selected), title: model.name ?? model.id, disabled: busy,
-										onClick: () => { choose({ provider: activeGroup.id, model: model.id }); },
+										onClick: () => {
+											const reasoningEffort = reasoningEffortForModel(state.current, activeGroup.id, model);
+											choose({ provider: activeGroup.id, model: model.id, ...reasoningEffort === void 0 ? {} : { reasoningEffort } });
+										},
 										children: [(0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.optionCopy, style: { display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: model.name ?? model.id }), (0, react_jsx_runtime.jsx)("span", { className: ModelSelect_module_css_default.check, children: selected ? (0, react_jsx_runtime.jsx)(IconCheckOutlineRegular, {}) : null })]
 									}, model.id);
 								})]

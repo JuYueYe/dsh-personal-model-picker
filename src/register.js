@@ -40,7 +40,7 @@ function optionsOf(directory, t) {
 function selectionOf(state, id) {
 	for (const group of state.groups) for (const model of group.models) {
 		if (rowId(group.id, model.id) !== id) continue;
-		const reasoningEffort = state.current?.provider === group.id && state.current.model === model.id ? state.current?.reasoningEffort ?? model.reasoning?.defaultEffort : model.reasoning?.defaultEffort;
+		const reasoningEffort = reasoningEffortForModel(state.current, group.id, model);
 		return {
 			provider: group.id,
 			model: model.id,

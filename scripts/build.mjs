@@ -24,6 +24,7 @@ const REGIONS = [
   "catalog.js",
   "directory.js",
   "service.js",
+  "selection-helpers.js",
   "classnames.js",
   "styles.js",
   "model-select.js",
