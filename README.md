@@ -31,7 +31,7 @@ dsh plugin --profile web add github:JuYueYe/dsh-personal-model-picker
 
 **版本与兼容**
 
-- 当前版本 `1.1.2`。已在 DSH 核心 `0.2.0-rc.2`（官方桌面端 nightly）实测通过；原始改编基线为 `0.1.5-rc.2`。
+- 当前版本 `1.1.6`。已在 DSH 核心 `0.2.0-rc.2`（官方桌面端 nightly）实测通过；原始改编基线为 `0.1.5-rc.2`。
 - 图标导出随核心版本改过名：0.1.5 时代是 `IconXxx14` / `IconXxx16`，`0.2.0-rc.2` 起统一为 `IconXxxRegular`。本插件按 `...Regular` 取名——名字对不上时图标取到 `undefined`，React 渲染 `<undefined />` 会抛错，座位项被槽机制除名（`abdicate`），表现为**模型入口整个消失**（而不是样式错乱）。换核时先核对 `@deepseek-ai/dsh-client-ui-primitives` 的实际导出。
 - 用词与官方对齐：`推理等级`（官方 `menu.effort`）。
 
@@ -71,6 +71,11 @@ pnpm update dsh-personal-model-picker
 
 ## 变更
 
+### 1.1.6 · 2026-10-23
+
+- 修复小窗口或触发器靠近视口边缘时模型菜单被裁切：菜单按上下可用空间调整位置和实际高度。
+- 修复从模型列表切换模型时未传入该模型默认推理档位的问题；当前模型已选的显式档位继续优先保留。
+
 ### 1.1.4 · 1.1.5
 
 - **供应商名不再被截断**。左栏原来是 `1fr : 3fr`、卡片宽度又跟着触发器走，供应商名一长就只剩 `2gpt-...`、`disc...`。现在：卡片最窄 **420px**（上限 560px，受视口 `-24px` 夹紧）、两栏改成 **40% : 1fr**、供应商名 **`white-space: normal` + `overflow-wrap: anywhere` 换行**而不是省略号 —— 再长的名字也完整可见，行高随内容增长，列表照常滚动。
@@ -95,7 +100,7 @@ npm run verify    # 只校验 dist 是否与 src 一致（CI / prepack 用这个
 npm run check     # 产物语法检查
 ```
 
-`scripts/build.mjs` 做的是纯文本拼接（不引入打包器）：按固定顺序取 `src/` 的八个 region，套上 `window.__ModuleLoader__.load({id, factory})` 外壳与 `return module.exports;` 尾巴，并把换行统一归一成 LF（`.gitattributes` 虽然钉了 `eol=lf`，Windows 上的手改仍可能写进 CR）。新增 region 文件时，同时把它加进 `scripts/build.mjs` 的 `REGIONS` 数组。
+`scripts/build.mjs` 做的是纯文本拼接（不引入打包器）：按固定顺序取 `src/` 的九个 region，套上 `window.__ModuleLoader__.load({id, factory})` 外壳与 `return module.exports;` 尾巴，并把换行统一归一成 LF（`.gitattributes` 虽然钉了 `eol=lf`，Windows 上的手改仍可能写进 CR）。新增 region 文件时，同时把它加进 `scripts/build.mjs` 的 `REGIONS` 数组。
 
 `prepack` 已挂 `verify` —— `npm pack` 或发布前如果 `dist/` 落后于 `src/`，会直接失败而不是静默发出旧产物。
 
