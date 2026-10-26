@@ -31,7 +31,7 @@ dsh plugin --profile web add github:JuYueYe/dsh-personal-model-picker
 
 **版本与兼容**
 
-- 当前版本 `1.1.6`。已在 DSH 核心 `0.2.0-rc.2`（官方桌面端 nightly）实测通过；原始改编基线为 `0.1.5-rc.2`。
+- 当前版本 `1.1.7`。包清单声明的目标宿主范围为 DSH `>=0.2.0-rc.2 <0.3.0-0`；已在核心 `0.2.0-rc.2`（官方桌面端 nightly）实测通过，其他版本仍需按实际宿主验证。原始改编基线为 `0.1.5-rc.2`。
 - 图标导出随核心版本改过名：0.1.5 时代是 `IconXxx14` / `IconXxx16`，`0.2.0-rc.2` 起统一为 `IconXxxRegular`。本插件按 `...Regular` 取名——名字对不上时图标取到 `undefined`，React 渲染 `<undefined />` 会抛错，座位项被槽机制除名（`abdicate`），表现为**模型入口整个消失**（而不是样式错乱）。换核时先核对 `@deepseek-ai/dsh-client-ui-primitives` 的实际导出。
 - 用词与官方对齐：`推理等级`（官方 `menu.effort`）。
 
@@ -70,6 +70,10 @@ pnpm update dsh-personal-model-picker
 停用该 bundle，或把它从 `dsh.profile.bundles` 移除，然后**重启宿主**，官方模型入口即恢复。本插件只禁用官方那一个 entry、不直接改官方文件，因此移除后不会留下需要手工修复的残留。
 
 ## 变更
+
+### 1.1.7 · 2026-10-26
+
+- 在包清单中声明 DSH 宿主版本范围和 GitHub 仓库地址，供插件市场在 npm 发布后识别宿主要求与仓库关联。
 
 ### 1.1.6 · 2026-10-23
 
